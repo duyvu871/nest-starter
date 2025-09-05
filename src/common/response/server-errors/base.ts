@@ -12,7 +12,7 @@ export abstract class BaseServerError extends Error {
     message: string,
     statusCode: number,
     code: string,
-    details?: Record<string, unknown>
+    details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = this.constructor.name;
@@ -31,12 +31,12 @@ export abstract class BaseServerError extends Error {
       error: {
         code: this.code,
         message: this.message,
-        details: this.details
+        details: this.details,
       },
       meta: {
         timestamp: new Date().toISOString(),
-        version: 'v1'
-      }
+        version: 'v1',
+      },
     };
   }
 
@@ -49,7 +49,7 @@ export abstract class BaseServerError extends Error {
       statusCode: this.statusCode,
       code: this.code,
       message: this.message,
-      details: this.details
+      details: this.details,
     };
   }
 
@@ -67,4 +67,4 @@ export abstract class BaseServerError extends Error {
     this.details = { ...this.details, ...details };
     return this;
   }
-} 
+}

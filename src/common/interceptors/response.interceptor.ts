@@ -1,5 +1,8 @@
 import {
-  CallHandler, ExecutionContext, Injectable, NestInterceptor,
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
 } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
 import { ApiResponse } from 'common/response/success';
@@ -9,7 +12,6 @@ import { isRawResponse } from 'common/types/response.types';
 export class ResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const ctx = context.switchToHttp();
-    const res = ctx.getResponse();
     const req = ctx.getRequest();
 
     return next.handle().pipe(
@@ -26,7 +28,7 @@ export class ResponseInterceptor implements NestInterceptor {
 
         // Create standard success response
         const response = ApiResponse.success(data);
-        
+
         // Add request ID if available
         if (req.id) {
           response.withRequestId(req.id);

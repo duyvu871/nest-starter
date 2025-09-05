@@ -8,7 +8,7 @@ export class InternalServerError extends BaseServerError {
   constructor(
     message: string = 'Internal server error',
     code: string = 'INTERNAL_ERROR',
-    details?: any
+    details?: any,
   ) {
     super(message, 500, code, details);
   }

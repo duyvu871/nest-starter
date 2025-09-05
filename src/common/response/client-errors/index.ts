@@ -13,4 +13,4 @@ export { ForbiddenError } from './forbidden';
 export { NotFoundError } from './not-found';
 export { ConflictError } from './conflict';
 export { ValidationError } from './unprocessable-entity';
-export { RateLimitError } from './too-many-requests'; 
+export { RateLimitError } from './too-many-requests';

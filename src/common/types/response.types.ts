@@ -18,7 +18,7 @@ export interface BaseResponse {
 /**
  * Success response interface
  */
-export interface SuccessResponse<T = any> extends BaseResponse {
+export interface SuccessResponse<T = unknown> extends BaseResponse {
   success: true;
   /** Response data */
   data: T;
@@ -38,7 +38,7 @@ export interface ErrorResponse extends BaseResponse {
     /** Error message */
     message: string;
     /** Optional additional error details */
-    details?: Record<string, unknown>;
+    details?: unknown;
   };
 }
 
@@ -63,7 +63,8 @@ export interface PaginationInfo {
 /**
  * Paginated response interface
  */
-export interface PaginatedSuccessResponse<T = any> extends SuccessResponse<T[]> {
+export interface PaginatedSuccessResponse<T = unknown>
+  extends SuccessResponse<T[]> {
   /** Pagination information */
   pagination: PaginationInfo;
 }
@@ -71,7 +72,7 @@ export interface PaginatedSuccessResponse<T = any> extends SuccessResponse<T[]> 
 /**
  * Raw response wrapper to bypass the response interceptor
  */
-export interface RawResponse<T = any> {
+export interface RawResponse<T = unknown> {
   __raw: true;
   data: T;
 }
@@ -79,7 +80,7 @@ export interface RawResponse<T = any> {
 /**
  * Helper function to create a raw response that bypasses the interceptor
  */
-export function createRawResponse<T = any>(data: T): RawResponse<T> {
+export function createRawResponse<T = unknown>(data: T): RawResponse<T> {
   return {
     __raw: true,
     data,
@@ -89,6 +90,6 @@ export function createRawResponse<T = any>(data: T): RawResponse<T> {
 /**
  * Type guard to check if a response is a raw response
  */
-export function isRawResponse(data: any): data is RawResponse {
+export function isRawResponse(data: RawResponse): data is RawResponse {
   return data && typeof data === 'object' && data.__raw === true;
 }

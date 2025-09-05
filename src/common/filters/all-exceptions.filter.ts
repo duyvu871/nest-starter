@@ -1,8 +1,15 @@
 import {
-  ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus,
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Inject,
+  type LoggerService,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { 
+import { Request, Response } from 'express';
+import {
   BadRequestError,
   NotFoundError,
   UnauthorizedError,
@@ -10,38 +17,49 @@ import {
   ConflictError,
   ValidationError,
   RateLimitError,
-  BaseClientError
-} from '../response/client-errors';
-import { InternalServerError, BaseServerError } from '../response/server-errors';
+  BaseClientError,
+} from 'common/response/client-errors';
+import {
+  InternalServerError,
+  BaseServerError,
+} from 'common/response/server-errors';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  catch(exception: unknown, host: ArgumentsHost) {
+  constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+  ) {}
+
+  catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
-    const res = ctx.getResponse();
-    const req = ctx.getRequest();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
     // Default to internal server error
     let error: BaseClientError | BaseServerError;
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
 
     // Handle different types of exceptions
-    if (exception instanceof BaseClientError || exception instanceof BaseServerError) {
+    if (
+      exception instanceof BaseClientError ||
+      exception instanceof BaseServerError
+    ) {
       // Already using our error classes, use as is
       error = exception;
       status = exception.statusCode;
     } else if (exception instanceof HttpException) {
       // Convert NestJS HttpException to our error classes
       status = exception.getStatus();
-      const response = exception.getResponse();
+      const exceptionResponse = exception.getResponse();
       let message: string;
       let details: Record<string, unknown> | undefined;
 
-      if (typeof response === 'string') {
-        message = response;
-      } else if (response && typeof response === 'object') {
-        const obj = response as Record<string, any>;
-        message = obj.message ?? obj.error ?? 'Error';
+      if (typeof exceptionResponse === 'string') {
+        message = exceptionResponse;
+      } else if (exceptionResponse && typeof exceptionResponse === 'object') {
+        const obj = exceptionResponse as Record<string, unknown>;
+        message = (obj.message as string) ?? (obj.error as string) ?? 'Error';
         
         if (Array.isArray(obj.message)) {
           details = { validationErrors: obj.message };
@@ -101,10 +119,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
           break;
       }
       
-      error = new BadRequestError(message, code, { 
-        prismaCode: exception.code,
-        target: exception.meta?.target
-      });
+      const details: Record<string, unknown> = { 
+        prismaCode: exception.code
+      };
+      
+      if (exception.meta && typeof exception.meta === 'object' && 'target' in exception.meta) {
+        details.target = exception.meta.target;
+      }
+      
+      error = new BadRequestError(message, code, details);
     } else if (exception instanceof Error) {
       // Handle generic Error objects
       error = new InternalServerError(
@@ -117,10 +140,36 @@ export class AllExceptionsFilter implements ExceptionFilter {
       error = new InternalServerError('Unknown error occurred', 'UNKNOWN_ERROR');
     }
 
+    // Log detailed error information
+    this.logError(request, error, exception);
+
     // Send the error response
-    res.status(status).json(error.toResponse());
-    
-    // Log the error (could be extended with a proper logger)
-    console.error('Exception caught:', error.getSummary());
+    response.status(status).json(error.toResponse());
+  }
+
+  private logError(request: Request, error: BaseClientError | BaseServerError, originalException: unknown): void {
+    const errorContext = {
+      requestId: (request as any).requestId || 'unknown',
+      path: request.url,
+      method: request.method,
+      ip: request.ip,
+      userId: (request as any).user?.id || 'anonymous',
+      errorCode: error.code,
+      statusCode: error.statusCode,
+    };
+
+    // Client errors (4xx) are logged as warnings, server errors (5xx) as errors
+    if (error.statusCode >= 500) {
+      this.logger.error(`Server error: ${error.message}`, {
+        ...errorContext,
+        stack: originalException instanceof Error ? originalException.stack : undefined,
+        details: error.details,
+      });
+    } else if (error.statusCode >= 400) {
+      this.logger.warn(`Client error: ${error.message}`, {
+        ...errorContext,
+        details: error.details,
+      });
+    }
   }
 }

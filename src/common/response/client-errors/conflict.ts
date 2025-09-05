@@ -8,7 +8,7 @@ export class ConflictError extends BaseClientError {
   constructor(
     message: string = 'Resource conflict',
     code: string = 'CONFLICT',
-    details?: any
+    details?: any,
   ) {
     super(message, 409, code, details);
   }

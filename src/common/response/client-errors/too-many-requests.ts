@@ -14,4 +14,4 @@ export class RateLimitError extends BaseClientError {
   }
 }
 
-export default RateLimitError; 
+export default RateLimitError;

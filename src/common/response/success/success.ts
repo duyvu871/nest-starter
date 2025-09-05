@@ -1,3 +1,5 @@
+import { PaginationInfo } from 'app/common/types/response.types';
+
 /**
  * Success Response Class
  * Provides standardized success responses following API structure guidelines
@@ -19,7 +21,7 @@ export class ApiResponse<T = any> {
     this.message = message;
     this.meta = {
       timestamp: new Date().toISOString(),
-      version: 'v1'
+      version: 'v1',
     };
   }
 
@@ -51,7 +53,7 @@ export class ApiResponse<T = any> {
   toJSON() {
     const response: any = {
       success: this.success,
-      meta: this.meta
+      meta: this.meta,
     };
 
     if (this.data !== undefined) {
@@ -85,18 +87,18 @@ export class PaginatedResponse<T> extends ApiResponse<T[]> {
     page: number,
     limit: number,
     total: number,
-    message?: string
+    message?: string,
   ) {
     super(true, data, message);
     const totalPages = Math.ceil(total / limit);
-    
+
     this.pagination = {
       page,
       limit,
       total,
       totalPages,
       hasNext: page < totalPages,
-      hasPrev: page > 1
+      hasPrev: page > 1,
     };
   }
 
@@ -108,7 +110,7 @@ export class PaginatedResponse<T> extends ApiResponse<T[]> {
     page: number,
     limit: number,
     total: number,
-    message?: string
+    message?: string,
   ): PaginatedResponse<T> {
     return new PaginatedResponse(data, page, limit, total, message);
   }
@@ -118,7 +120,7 @@ export class PaginatedResponse<T> extends ApiResponse<T[]> {
    */
   toJSON() {
     const response = super.toJSON();
-    response.pagination = this.pagination;
+    response.pagination = this.pagination as PaginationInfo;
     return response;
   }
 }
