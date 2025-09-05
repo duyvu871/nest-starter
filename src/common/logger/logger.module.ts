@@ -1,63 +1,24 @@
-import { Module } from '@nestjs/common';
-import { WinstonModule, utilities as nestWinstonModuleUtilities } from 'nest-winston';
-import * as winston from 'winston';
-import 'winston-daily-rotate-file';
+// src/logger/logger.module.ts  (Dynamic Module forFeature)
+import { DynamicModule, Module, Provider } from '@nestjs/common';
+import type { Logger as WinstonLogger } from 'winston';
+import { LoggerCoreModule, BASE_LOGGER } from './logger.core.module';
+import { CONTEXT_LOGGER_TOKEN } from './logger.token';
+import { LoggerService } from './logger.service';
 
-const isProd = process.env.NODE_ENV === 'production';
+@Module({})
+export class LoggerModule {
+  static forFeature(contexts: string[]): DynamicModule {
+    const providers: Provider[] = contexts.map((ctx) => ({
+      provide: CONTEXT_LOGGER_TOKEN(ctx),
+      useFactory: (base: WinstonLogger) => new LoggerService(base, ctx),
+      inject: [BASE_LOGGER],
+    }));
 
-const consoleTransport = new winston.transports.Console({
-  level: process.env.LOG_LEVEL || (isProd ? 'info' : 'debug'),
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.ms(),
-    // Log ra console kiểu NestJS (màu sắc, context)
-    nestWinstonModuleUtilities.format.nestLike('MyApp', {
-      colors: !isProd,
-      prettyPrint: !isProd,
-    }),
-  ),
-});
-
-const errorFileRotate = new (winston.transports as any).DailyRotateFile({
-  level: 'error',
-  dirname: 'logs',
-  filename: 'error-%DATE%.log',
-  datePattern: 'YYYY-MM-DD',
-  zippedArchive: true,
-  maxSize: '20m',
-  maxFiles: '14d',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json(),
-  ),
-});
-
-const combinedFileRotate = new (winston.transports as any).DailyRotateFile({
-  level: process.env.FILE_LOG_LEVEL || 'info',
-  dirname: 'logs',
-  filename: 'combined-%DATE%.log',
-  datePattern: 'YYYY-MM-DD',
-  zippedArchive: true,
-  maxSize: '20m',
-  maxFiles: '14d',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.ms(),
-    winston.format.json(),
-  ),
-});
-
-@Module({
-  imports: [
-    WinstonModule.forRoot({
-      // Có thể set defaultMeta để gắn app/version, env...
-      transports: [consoleTransport, errorFileRotate, combinedFileRotate],
-      exitOnError: false,
-      handleExceptions: true,
-      handleRejections: true,
-    }),
-  ],
-  exports: [WinstonModule],
-})
-export class LoggerModule {}
+    return {
+      module: LoggerModule,
+      imports: [LoggerCoreModule],
+      providers,
+      exports: providers,
+    };
+  }
+}

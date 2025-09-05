@@ -5,10 +5,9 @@ import {
   HttpException,
   HttpStatus,
   Inject,
-  type LoggerService,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Request, Response } from 'express';
+import { Request, Response, response } from 'express';
 import {
   BadRequestError,
   NotFoundError,
@@ -23,13 +22,23 @@ import {
   InternalServerError,
   BaseServerError,
 } from 'common/response/server-errors';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { CONTEXT_LOGGER_TOKEN } from 'common/logger/logger.token';
+import { HttpLogInterceptor } from '../interceptors/http-logger.interceptor';
+import { LoggerService } from 'common/logger/logger.service';
 
 @Catch()
-export class AllExceptionsFilter implements ExceptionFilter {
+export class AllExceptionsFilter
+  extends HttpLogInterceptor
+  implements ExceptionFilter
+{
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {}
+    @Inject(CONTEXT_LOGGER_TOKEN('APP'))
+    private readonly appLogger: LoggerService,
+    @Inject(CONTEXT_LOGGER_TOKEN('HTTP'))
+    private readonly httpLogger: LoggerService,
+  ) {
+    super(httpLogger);
+  }
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -60,7 +69,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       } else if (exceptionResponse && typeof exceptionResponse === 'object') {
         const obj = exceptionResponse as Record<string, unknown>;
         message = (obj.message as string) ?? (obj.error as string) ?? 'Error';
-        
+
         if (Array.isArray(obj.message)) {
           details = { validationErrors: obj.message };
           message = 'Validation failed';
@@ -101,7 +110,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = HttpStatus.BAD_REQUEST;
       let message = `Database error: ${exception.code}`;
       let code = 'DATABASE_ERROR';
-      
+
       // Map common Prisma error codes to more specific messages
       switch (exception.code) {
         case 'P2002':
@@ -118,26 +127,33 @@ export class AllExceptionsFilter implements ExceptionFilter {
           code = 'FOREIGN_KEY_CONSTRAINT';
           break;
       }
-      
-      const details: Record<string, unknown> = { 
-        prismaCode: exception.code
+
+      const details: Record<string, unknown> = {
+        prismaCode: exception.code,
       };
-      
-      if (exception.meta && typeof exception.meta === 'object' && 'target' in exception.meta) {
+
+      if (
+        exception.meta &&
+        typeof exception.meta === 'object' &&
+        'target' in exception.meta
+      ) {
         details.target = exception.meta.target;
       }
-      
+
       error = new BadRequestError(message, code, details);
     } else if (exception instanceof Error) {
       // Handle generic Error objects
       error = new InternalServerError(
         exception.message || 'Internal server error',
         'INTERNAL_ERROR',
-        { stack: exception.stack }
+        { stack: exception.stack },
       );
     } else {
       // Handle unknown errors
-      error = new InternalServerError('Unknown error occurred', 'UNKNOWN_ERROR');
+      error = new InternalServerError(
+        'Unknown error occurred',
+        'UNKNOWN_ERROR',
+      );
     }
 
     // Log detailed error information
@@ -147,27 +163,27 @@ export class AllExceptionsFilter implements ExceptionFilter {
     response.status(status).json(error.toResponse());
   }
 
-  private logError(request: Request, error: BaseClientError | BaseServerError, originalException: unknown): void {
-    const errorContext = {
-      requestId: (request as any).requestId || 'unknown',
-      path: request.url,
-      method: request.method,
-      ip: request.ip,
-      userId: (request as any).user?.id || 'anonymous',
-      errorCode: error.code,
-      statusCode: error.statusCode,
-    };
-
+  private logError(
+    request: Request,
+    error: BaseClientError | BaseServerError,
+    originalException: unknown,
+  ): void {
+    const requestId = request.requestId;
+    const requestMeta = this.getRequestMeta(request, response, requestId);
+    console.log('details', error.details);
     // Client errors (4xx) are logged as warnings, server errors (5xx) as errors
     if (error.statusCode >= 500) {
-      this.logger.error(`Server error: ${error.message}`, {
-        ...errorContext,
-        stack: originalException instanceof Error ? originalException.stack : undefined,
+      this.httpLogger.error(`Server error: ${error.message}`, {
+        ...requestMeta,
+        stack:
+          originalException instanceof Error
+            ? originalException.stack
+            : undefined,
         details: error.details,
       });
     } else if (error.statusCode >= 400) {
-      this.logger.warn(`Client error: ${error.message}`, {
-        ...errorContext,
+      this.httpLogger.warn(`Client error: ${error.message}`, {
+        ...requestMeta,
         details: error.details,
       });
     }

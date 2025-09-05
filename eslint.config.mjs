@@ -36,6 +36,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
       '@typescript-eslint/no-unsafe-function-type': 'warn',
       '@typescript-eslint/no-unsafe-type-assertion': 'warn',
+      '@typescript-eslint/no-base-to-string': 'warn',
     },
   },
 );

@@ -38,7 +38,16 @@ export type Env = z.infer<typeof envSchema>;
 // validate the environment variables
 export function validateEnv(input: Record<string, unknown>): Env {
   // Construct DATABASE_URL if not provided but individual components are
-  if (!input.DATABASE_URL && input.DB_USER && input.DB_PASSWORD && input.DB_HOST && input.DB_PORT && input.DB_NAME && input.DB_SCHEMA) {
+  if (
+    !input.DATABASE_URL &&
+    input.DB_USER &&
+    input.DB_PASSWORD &&
+    input.DB_HOST &&
+    input.DB_PORT &&
+    input.DB_NAME &&
+    input.DB_SCHEMA
+  ) {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     input.DATABASE_URL = `postgresql://${input.DB_USER}:${input.DB_PASSWORD}@${input.DB_HOST}:${input.DB_PORT}/${input.DB_NAME}?schema=${input.DB_SCHEMA}`;
   }
 

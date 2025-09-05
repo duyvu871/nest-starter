@@ -1,0 +1,50 @@
+#!/usr/bin/env sh
+# Get subject (first line) and remove CR (if commit from Windows)
+subject="$(head -n1 "$1" | tr -d '\r')"
+
+# Allowed types
+types='feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert|test'
+
+fail() {
+  echo "❌ $1"
+  echo "🔎 Subject: $subject"
+  echo "ℹ️  Format: type(scope)!: description (≤ 200 chars)"
+  echo "    Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert"
+  echo "    Example: feat(auth): add login"
+  exit 1
+}
+
+# 1) Subject is not empty
+[ -z "$subject" ] && fail "Subject is empty."
+
+# 2) Start with a valid type (lowercase)
+echo "$subject" | grep -Eq "^($types)([\(!:]|\()" || fail "Invalid type or not at the start of the line."
+
+# 3) If there is a scope, it must be in the form (a-z0-9-), no spaces
+if echo "$subject" | grep -Eq "^\w+\("; then
+  echo "$subject" | grep -Eq "^($types)\([a-z0-9-]+\)" \
+    || fail "Invalid scope. Use (scope-name) only containing a-z, 0-9, and hyphens."
+fi
+
+# 4) If there is '!', it must be immediately before the ':'
+if echo "$subject" | grep -q "!"; then
+  echo "$subject" | grep -Eq "^($types)(\([a-z0-9-]+\))?!: " \
+    || fail "The '!' must be immediately before the ':' (e.g. fix(core)!: ...)."
+fi
+# 5) Must have ': ' (colon + space)
+echo "$subject" | grep -Eq "^($types)(\([a-z0-9-]+\))?(!)?: " \
+  || fail "Missing ': ' after type/scope (e.g. feat(ui): ...)."
+
+# 6) Description must be 1..50 characters long
+desc="$(printf '%s' "$subject" | sed -E 's/^('"$types"')(\([a-z0-9-]+\))?(!)?: //')"
+[ -z "$desc" ] && fail "Missing description after ': '."
+
+# Note: ${#desc} counts by byte, enough for most cases. For Unicode-accurate, you can use awk/perl.
+desc_len=${#desc}
+[ "$desc_len" -gt 200 ] && fail "Description is too long ($desc_len > 200). Please shorten it."
+
+# # 7) End of line: no additional characters after the description
+# echo "$subject" | grep -Eq "^($types)(\([a-z0-9-]+\))?(!)?: [^\r\n]{1,200}$" \
+#   || fail "Subject has invalid characters at the end of the line."
+
+echo "✅ Commit message is valid."
