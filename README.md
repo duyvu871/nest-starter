@@ -262,3 +262,71 @@ make docker-prod-down
 # or
 docker-compose --env-file .env.production down
 ```
+
+## Git Hooks with Husky
+
+The project uses [Husky](https://typicode.github.io/husky/) to enforce code quality and consistency through Git hooks. These hooks run automatically at specific points in the Git workflow.
+
+### Available Hooks
+
+1. **pre-commit**: Runs before each commit
+   - Executes `npm run lint` to ensure code follows style guidelines
+   - Prevents commits with linting errors
+
+2. **commit-msg**: Validates commit message format
+   - Enforces [Conventional Commits](https://www.conventionalcommits.org/) format
+   - Ensures commit messages are descriptive and follow a standard pattern
+
+3. **pre-push**: Runs before pushing to remote
+   - Executes `npm run build` to ensure code builds successfully
+   - Prevents pushing code that doesn't compile
+
+### Commit Message Format
+
+Commit messages must follow this format:
+
+```
+type(scope?): description
+```
+
+Where:
+- **type**: The type of change (required)
+  - `feat`: A new feature
+  - `fix`: A bug fix
+  - `docs`: Documentation changes
+  - `style`: Code style changes (formatting, etc.)
+  - `refactor`: Code changes that neither fix bugs nor add features
+  - `test`: Adding or updating tests
+  - `chore`: Changes to the build process or auxiliary tools
+  - `perf`: Performance improvements
+  - `ci`: CI configuration changes
+  - `build`: Changes that affect the build system
+  - `revert`: Reverting a previous commit
+
+- **scope**: The scope of the change (optional)
+  - Should be a noun describing a section of the codebase (e.g., `auth`, `users`, `database`)
+  - Must contain only lowercase letters, numbers, and hyphens
+
+- **description**: A short description of the change (required)
+  - Should be concise (max 200 characters)
+  - Written in imperative mood ("add feature" not "added feature")
+
+### Examples of Valid Commit Messages
+
+```
+feat(auth): add login functionality
+fix(users): resolve issue with user registration
+docs: update README with setup instructions
+style: format code according to style guide
+refactor(database): improve query performance
+test(api): add tests for user endpoints
+chore: update dependencies
+```
+
+### Breaking Changes
+
+For breaking changes, add an exclamation mark before the colon:
+
+```
+feat(api)!: change response format of user endpoints
+```
