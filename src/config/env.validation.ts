@@ -30,6 +30,10 @@ export const envSchema = z.object({
   // Docker Ports (optional, used by docker-compose)
   DEV_DB_PORT: z.coerce.number().int().min(1).max(65535).optional(),
   PROD_DB_PORT: z.coerce.number().int().min(1).max(65535).optional(),
+
+  // Jobs
+  TZ: z.string().default('Asia/Ho_Chi_Minh'),
+  EXAMPLE_CRON: z.string().default('0 2 * * *'), // every day at 2:00 AM
 });
 
 // define the environment variables type

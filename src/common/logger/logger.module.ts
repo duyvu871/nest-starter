@@ -1,10 +1,11 @@
 // src/logger/logger.module.ts  (Dynamic Module forFeature)
-import { DynamicModule, Module, Provider } from '@nestjs/common';
+import { DynamicModule, Module, Provider, Global } from '@nestjs/common';
 import type { Logger as WinstonLogger } from 'winston';
 import { LoggerCoreModule, BASE_LOGGER } from './logger.core.module';
 import { CONTEXT_LOGGER_TOKEN } from './logger.token';
 import { LoggerService } from './logger.service';
 
+@Global()
 @Module({})
 export class LoggerModule {
   static forFeature(contexts: string[]): DynamicModule {

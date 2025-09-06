@@ -78,8 +78,8 @@ enum payment_method {
  * It is used to track the user of the system
  * User has many products
  */
-model user {
-  id          String      @id @default(uuid())
+model User {
+  id          String      @id @default(uuid()) @db.Uuid
   email       String      @unique
   password    String
   username    String      @unique
@@ -90,13 +90,15 @@ model user {
   updatedAt   DateTime    @updatedAt
 
   // relations
-  ownedStores      store[] // user is owner of the store
-  memberships      store_member[] // user is member of the store
-  products_created product[] // user is creator of the product
-  orders_cashier   order[] // user is cashier of the order
+  ownedStores      Store[] // user is owner of the store
+  memberships      StoreMember[] // user is member of the store
+  products_created Product[] // user is creator of the product
+  orders_cashier   Order[] // user is cashier of the order
 
   // indexes
   @@index([role, status])
+
+  @@map("user")
 }
 
 /**
@@ -106,25 +108,27 @@ model user {
  * Store has many products
  * Store has many members
  */
-model store {
-  id          String   @id @default(uuid())
-  ownerId     String   @db.Uuid
+model Store {
+  id          String   @id @default(uuid()) @db.Uuid
+  owner_id    String   @db.Uuid
   name        String
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // relations
-  owner            user               @relation(fields: [ownerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  members          store_member[]
-  products         product[]
-  categories       category[]
-  customer         customer[]
-  statistics_daily statistics_daily[]
+  owner            User               @relation(fields: [owner_id], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  members          StoreMember[]
+  products         Product[]
+  categories       Category[]
+  customer         Customer[]
+  statistics_daily StatisticsDaily[]
 
   // indexes
-  @@index([ownerId])
+  @@index([owner_id])
   @@index([name])
+
+  @@map("store")
 }
 
 /**
@@ -134,19 +138,21 @@ model store {
  * Store member has one store
  * Store member has one user
  */
-model store_member {
+model StoreMember {
   storeId   String          @db.Uuid
   userId    String          @db.Uuid
   role      StoreMemberRole @default(MEMBER)
   createdAt DateTime        @default(now())
 
   // relations
-  store store @relation(fields: [storeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user  user  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   // indexes
   @@id([storeId, userId])
   @@index([userId])
+
+  @@map("store_member")
 }
 
 /**
@@ -156,8 +162,8 @@ model store_member {
  * Order customer has one order
  * Order customer has one user
  */
-model customer {
-  id        String   @unique @default(uuid())
+model Customer {
+  id        String   @unique @default(uuid()) @db.Uuid
   store_id  String   @db.Uuid
   name      String
   phone     String?
@@ -170,12 +176,14 @@ model customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   // relations
-  store     store    @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  orders    order[]
+  store     Store    @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orders    Order[]
 
   // indexes
   @@id([store_id, id])
   @@index([store_id])
+
+  @@map("customer")
 }
 
 /**
@@ -185,8 +193,8 @@ model customer {
  * Product has many inventories
  * Product has one user
  */
-model product {
-  id              String           @id @default(uuid())
+model Product {
+  id              String           @id @default(uuid()) @db.Uuid
   store_id        String           @db.Uuid
   name            String
   sku             String           @unique
@@ -201,17 +209,19 @@ model product {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   // relations
-  created_by_user user             @relation(fields: [created_by], references: [id], onDelete: Cascade)
-  store           store            @relation(fields: [store_id], references: [id], onDelete: Cascade)
-  categories      category[]
-  inventories     inventory[]
-  tags            tag[]
-  stock_movements stock_movement[]
-  order           order[]
-  order_item      order_item[]
+  created_by_user User             @relation(fields: [created_by], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  store           Store            @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  categories      Category[]
+  inventories     Inventory[]
+  tags            Tag[]
+  stock_movements StockMovement[]
+  order           Order[]
+  order_item      OrderItem[]
 
   // indexes
   @@index([created_by, product_status, name])
+
+  @@map("product")
 }
 
 /**
@@ -219,9 +229,9 @@ model product {
  * Inventory is a model that represents the inventory of a product
  * It is used to track the inventory of a product
  */
-model inventory {
-  id         String           @id @default(uuid())
-  product_id String
+model Inventory {
+  id         String           @id @default(uuid()) @db.Uuid
+  product_id String           @db.Uuid
   quantity   Int              @default(0)
   discount   Int              @default(0)
   total      Int              @default(0)
@@ -229,10 +239,12 @@ model inventory {
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
   // relations
-  product    product          @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  product    Product          @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   // indexes
   @@index([product_id, status])
+
+  @@map("inventory")
 }
 
 /**
@@ -240,20 +252,22 @@ model inventory {
  * Category is a model that represents the category of a product
  * It is used to track the category of a product
  */
-model category {
-  id          String    @id @default(uuid())
+model Category {
+  id          String    @id @default(uuid()) @db.Uuid
   store_id    String    @db.Uuid
   name        String
   description String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   // relations
-  store       store     @relation(fields: [store_id], references: [id], onDelete: Cascade)
-  products    product[]
+  store       Store     @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  products    Product[]
 
   // indexes
   @@index([store_id])
   @@index([name])
+
+  @@map("category")
 }
 
 /**
@@ -261,31 +275,35 @@ model category {
  * Tag is a model that represents the tag of a product
  * It is used to track the tag of a product
  */
-model tag {
-  id          String    @id @default(uuid())
+model Tag {
+  id          String    @id @default(uuid()) @db.Uuid
   name        String
   description String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   // relations
-  products    product[]
+  products    Product[]
 
   // indexes
   @@index([name])
+
+  @@map("tag")
 }
 
-model stock_movement {
-  id         String              @id @default(uuid())
-  product_id String
+model StockMovement {
+  id         String              @id @default(uuid()) @db.Uuid
+  product_id String              @db.Uuid
   quantity   Int
   type       stock_movement_type
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
   // relations
-  product    product             @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  product    Product             @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   // indexes
   @@index([product_id])
+
+  @@map("stock_movement")
 }
 
 /**
@@ -293,8 +311,8 @@ model stock_movement {
  * Order is a model that represents the order of a product
  * It is used to track the order of a product
  */
-model order {
-  id              String         @id @default(uuid())
+model Order {
+  id              String         @id @default(uuid()) @db.Uuid
   code            String?
   product_id      String         @db.Uuid
   cashier_id      String         @db.Uuid
@@ -316,16 +334,18 @@ model order {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   // relations
-  product         product        @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  cashier         user           @relation(fields: [cashier_id], references: [id], onDelete: Cascade)
-  customer        customer?      @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-  order_item      order_item[]
+  product         Product        @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  cashier         User           @relation(fields: [cashier_id], references: [id], onDelete: Cascade)
+  customer        Customer?      @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  order_item      OrderItem[]
 
   // indexes
   @@index([cashier_id])
   @@index([customer_id])
   @@index([product_id])
   @@index([status])
+
+  @@map("order")
 }
 
 /**
@@ -333,8 +353,8 @@ model order {
  * Order item is a model that represents the item of an order
  * It is used to track the item of an order
  */
-model order_item {
-  id         String   @id @default(uuid())
+model OrderItem {
+  id         String   @id @default(uuid()) @db.Uuid
   order_id   String   @db.Uuid
   product_id String   @db.Uuid
   quantity   Int      @default(0)
@@ -343,16 +363,18 @@ model order_item {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   // relations
-  order      order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  product    product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  order      Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   // indexes
   @@index([order_id])
   @@index([product_id])
+
+  @@map("order_item")
 }
 
-model statistics_daily {
-  id        String   @id @default(uuid())
+model StatisticsDaily {
+  id        String   @id @default(uuid()) @db.Uuid
   stat_date DateTime @default(now())
   store_id  String   @db.Uuid
 
@@ -381,9 +403,11 @@ model statistics_daily {
   // Note: Daily KPIs; sum from orders and stock_movements, no need order_items
 
   // relations
-  store store @relation(fields: [store_id], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   // indexes
   @@index([store_id])
   @@index([stat_date])
+
+  @@map("statistics_daily")
 }

@@ -12,20 +12,58 @@ const isProd = process.env.NODE_ENV === 'production';
 const onlyContext = (ctx: string) =>
   winston.format((info) => (info.context === ctx ? info : false))();
 
+// Format cho base logger (non-HTTP logs)
+const baseConsoleFormat = winston.format.printf(
+  ({ level, message, timestamp, context, ...rest }) => {
+    const app = process.env.APP_NAME ?? 'MyApp';
+    const meta = Object.keys(rest).length ? ` ${JSON.stringify(rest)}` : '';
+    const ctx = context ? ` [${context}]` : '';
+    return `[${app}] ${process.pid} ${timestamp} ${level.toUpperCase()}${ctx} ${message}${meta}`;
+  },
+);
+
+// Format cho HTTP logger
+const httpConsoleFormat = winston.format.combine(
+  winston.format.ms(),
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  prettyHttpConsole,
+);
+
+// Create console transports with context filtering
+const baseConsoleTransport = new winston.transports.Console({
+  level: process.env.LOG_LEVEL || (isProd ? 'info' : 'debug'),
+  format: winston.format.combine(
+    // Only log non-HTTP contexts
+    winston.format((info) => (info.context !== 'HTTP' ? info : false))(),
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.colorize({ all: !isProd }),
+    baseConsoleFormat,
+  ),
+});
+
+const httpConsoleTransport = new winston.transports.Console({
+  level: process.env.LOG_LEVEL || (isProd ? 'info' : 'debug'),
+  format: winston.format.combine(
+    // Only log HTTP context
+    onlyContext('HTTP'),
+    httpConsoleFormat,
+  ),
+});
+
 function createBaseLogger(): winston.Logger {
-  const consoleTransport = new winston.transports.Console({
-    level: process.env.LOG_LEVEL || (isProd ? 'info' : 'debug'),
+  const httpFileRotate = new (winston.transports as any).DailyRotateFile({
+    level: 'info',
+    dirname: 'logs',
+    filename: 'http-%DATE%.log',
+    datePattern: 'YYYY-MM-DD',
+    zippedArchive: true,
+    maxSize: '20m',
+    maxFiles: '14d',
     format: winston.format.combine(
+      onlyContext('HTTP'),
+      winston.format.timestamp(),
       winston.format.ms(),
-      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-      // winston.format.colorize({ all: !isProd }),
-      // winston.format.printf(({ level, message, timestamp, context, ...rest }) => {
-      //   const app = process.env.APP_NAME ?? 'MyApp';
-      //   const meta = Object.keys(rest).length ? ` ${JSON.stringify(rest)}` : '';
-      //   const ctx = context ? ` [${context}]` : '';
-      //   return `[${app}] ${process.pid} ${timestamp} ${level.toUpperCase()}${ctx} ${message}${meta}`;
-      // })
-      prettyHttpConsole,
+      winston.format.json(),
     ),
   });
 
@@ -59,30 +97,14 @@ function createBaseLogger(): winston.Logger {
     ),
   });
 
-  const httpFileRotate = new (winston.transports as any).DailyRotateFile({
-    level: 'info',
-    dirname: 'logs',
-    filename: 'http-%DATE%.log',
-    datePattern: 'YYYY-MM-DD',
-    zippedArchive: true,
-    maxSize: '20m',
-    maxFiles: '14d',
-    format: winston.format.combine(
-      onlyContext('HTTP'),
-      winston.format.timestamp(),
-      winston.format.ms(),
-      prettyHttpConsole,
-      winston.format.json(),
-    ),
-  });
-
   return winston.createLogger({
     levels: winston.config.npm.levels,
     transports: [
-      consoleTransport,
-      errorFileRotate,
-      combinedFileRotate,
-      httpFileRotate,
+      baseConsoleTransport, // Base logs (non-HTTP)
+      httpConsoleTransport, // HTTP logs
+      errorFileRotate, // All errors
+      combinedFileRotate, // All combined logs
+      httpFileRotate, // HTTP specific file logs
     ],
     exitOnError: false,
   });

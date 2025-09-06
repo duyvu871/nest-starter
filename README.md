@@ -95,6 +95,33 @@ This script will:
 2. Push the Prisma schema to the database
 3. Seed the database with sample data
 
+### Clearing Development Environment
+
+If you want to completely clean up your development environment, you can use the clear script:
+
+```bash
+# Make the script executable
+chmod +x ./scripts/clear_dev_env.sh
+
+# Run the clear script
+./scripts/clear_dev_env.sh
+```
+
+Or using Make:
+
+```bash
+make clear-dev
+```
+
+This script will:
+1. **Remove** `.env.development` file
+2. **Stop and remove** the development database container with volumes
+3. **Clean** Prisma generated files
+4. **Clean** `dist` folder
+5. **Clean** `logs` folder
+
+**⚠️ WARNING:** This will permanently delete your development database data and configuration!
+
 ### Using Make Commands
 
 If you have Make installed, you can use the following commands:
@@ -103,11 +130,20 @@ If you have Make installed, you can use the following commands:
 # Setup the entire development environment (database, schema, seed data)
 make setup-dev
 
+# Clear the entire development environment
+make clear-dev
+
 # Start only the development database
 make docker-dev-up
 
 # Push the schema to the database
 make db-push-dev
+
+# Reset and recreate database with fresh schema and seed data (no confirmation)
+make db-reset-dev
+
+# Reset database with user confirmation prompt
+make db-reset-force
 
 # Seed the database with sample data
 make db-seed-dev
@@ -129,6 +165,12 @@ npm run prisma:generate
 
 # Push the schema to the database
 npm run db:push:dev
+
+# Reset and recreate database with fresh schema and seed data (no confirmation)
+npm run prisma:migrate:reset:force
+
+# Reset database with user confirmation prompt
+npm run prisma:migrate:reset
 
 # Seed the database
 npm run db:seed:dev
@@ -154,7 +196,75 @@ npm run prisma:migrate
 
 # Push schema changes without migrations
 npm run db:push:dev
+
+# Reset and recreate database (⚠️ WARNING: This will delete all data!)
+npm run prisma:migrate:reset:force
 ```
+
+### Database Reset Commands
+
+The project provides two database reset commands with different confirmation behaviors:
+
+#### 1. Force Reset (No Confirmation)
+
+```bash
+# Using Make
+make db-reset-dev
+
+# Using npm directly
+npm run prisma:migrate:reset:force
+```
+
+**What it does:**
+1. **Drops all tables** in the database
+2. **Recreates the database schema** from your Prisma schema
+3. **Runs the seed script** to populate with sample data
+
+**⚠️ WARNING:** This command will **permanently delete all data** without asking for confirmation!
+
+#### 2. Interactive Reset (With Confirmation)
+
+```bash
+# Using Make
+make db-reset-confirm
+
+# Using npm directly
+npm run prisma:migrate:reset
+```
+
+**What it does:**
+- Shows a **confirmation prompt** asking if you want to continue
+- Displays **warning messages** about data loss
+- Only proceeds if you type `yes` or `y`
+- Same database operations as the force reset if confirmed
+
+**Example output:**
+```
+🚨 WARNING: Database Reset Operation
+==================================================
+
+This action will:
+  ❌ Delete ALL data in your database
+  ❌ Drop all tables
+  ✅ Recreate database schema from Prisma schema
+  ✅ Run seed script to populate sample data
+
+This operation cannot be undone!
+
+Are you sure you want to continue? (yes/no):
+```
+
+#### When to use each command:
+
+**Use `db-reset-dev` (force):**
+- In automated scripts or CI/CD pipelines
+- When you need non-interactive operation
+- When you're absolutely sure you want to reset
+
+**Use `db-reset-force` (interactive):**
+- Force reset with no warning
+
+**Note:** Both commands only work in development environment and use the `.env.development` file.
 
 ## Running the Application
 

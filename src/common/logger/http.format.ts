@@ -3,7 +3,16 @@ import winston from 'winston';
 import { RequestMeta } from 'common/types/request.type';
 
 export const prettyHttpConsole = winston.format.printf(
-  ({ level, message, timestamp, ...requestMeta }: any) => {
+  ({ level, message, timestamp, context, ...requestMeta }: any) => {
+    if (context !== 'HTTP') {
+      return {
+        level,
+        message,
+        context,
+        timestamp,
+        ...requestMeta,
+      };
+    }
     const meta: RequestMeta | undefined = requestMeta;
     // colorize with level
     const colorizeLevel =
@@ -36,7 +45,7 @@ export const prettyHttpConsole = winston.format.printf(
     // });
 
     return [
-      `[${meta.context}]`,
+      `[${context}]`,
       chalk.gray(timestamp),
       colorizeLevel,
       method,

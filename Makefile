@@ -53,7 +53,7 @@ docker-prod-down:
 	docker-compose --env-file .env.production down
 
 # Database commands
-.PHONY: db-migrate db-studio db-push-dev db-push-test db-push-prod db-seed-dev db-seed-test db-seed-prod
+.PHONY: db-migrate db-studio db-push-dev db-push-test db-push-prod db-seed-dev db-seed-test db-seed-prod db-reset-dev db-reset-force
 
 db-migrate:
 	npm run prisma:migrate
@@ -79,8 +79,14 @@ db-seed-test:
 db-seed-prod:
 	npm run db:seed:prod
 
+db-reset-dev:
+	npm run prisma:migrate:reset:dev
+
+db-reset-force:
+	npm run prisma:migrate:reset:force
+
 # Script commands
-.PHONY: script-setup-dev script-setup-test script-setup-prod
+.PHONY: script-setup-dev script-setup-test script-setup-prod script-clear-dev
 
 script-setup-dev:
 	chmod +x ./scripts/setup_dev_env.sh
@@ -94,8 +100,12 @@ script-setup-prod:
 	chmod +x ./scripts/setup_prod_env.sh
 	./scripts/setup_prod_env.sh
 
+script-clear-dev:
+	chmod +x ./scripts/clear_dev_env.sh
+	./scripts/clear_dev_env.sh
+
 # Combined commands
-.PHONY: setup-dev setup-test setup-prod
+.PHONY: setup-dev setup-test setup-prod clear-dev
 
 setup-dev:
 	$(MAKE) script-setup-dev
@@ -105,6 +115,9 @@ setup-test:
 
 setup-prod:
 	$(MAKE) script-setup-prod
+
+clear-dev:
+	$(MAKE) script-clear-dev
 
 # Help
 .PHONY: help
@@ -135,6 +148,8 @@ help:
 	@echo "    make db-push-dev      - Push schema to dev database"
 	@echo "    make db-push-test     - Push schema to test database"
 	@echo "    make db-push-prod     - Push schema to production database"
+	@echo "    make db-reset-dev     - Reset and recreate dev database with fresh schema and seed data"
+	@echo "    make db-reset-force - Reset dev database with user confirmation prompt"
 	@echo "    make db-seed-dev      - Seed dev database with sample data"
 	@echo "    make db-seed-test     - Seed test database with sample data"
 	@echo "    make db-seed-prod     - Seed production database with sample data"
@@ -142,7 +157,9 @@ help:
 	@echo "    make script-setup-dev  - Run development setup script"
 	@echo "    make script-setup-test - Run test setup script"
 	@echo "    make script-setup-prod - Run production setup script"
+	@echo "    make script-clear-dev  - Run development clear script"
 	@echo "  Combined:"
 	@echo "    make setup-dev        - Setup development environment"
 	@echo "    make setup-test       - Setup test environment"
 	@echo "    make setup-prod       - Setup production environment"
+	@echo "    make clear-dev        - Clear development environment"

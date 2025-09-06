@@ -7,5 +7,5 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  name?: string;
+  username?: string;
 }
