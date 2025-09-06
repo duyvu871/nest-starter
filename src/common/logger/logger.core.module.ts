@@ -17,7 +17,7 @@ const baseConsoleFormat = winston.format.printf(
   ({ level, message, timestamp, context, ...rest }) => {
     const app = process.env.APP_NAME ?? 'MyApp';
     const meta = Object.keys(rest).length ? ` ${JSON.stringify(rest)}` : '';
-    const ctx = context ? ` [${context}]` : '';
+    const ctx = context ? `[${context}]` : '';
     return `[${app}] ${process.pid} ${timestamp} ${level.toUpperCase()}${ctx} ${message}${meta}`;
   },
 );
