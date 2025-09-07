@@ -24,7 +24,7 @@ import { JobsModule } from './jobs/jobs.module';
       load: [appConfig, databaseConfig, jobsConfig],
     }),
     LoggerCoreModule,
-    LoggerModule.forFeature(['HTTP', 'DATABASE', 'APP']),
+    LoggerModule.forFeature(['HTTP', 'DATABASE', 'APP', 'EMAIL']),
     PrismaModule,
     UsersModule,
     ScheduleModule.forRoot(),
