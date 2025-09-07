@@ -25,6 +25,7 @@ async function bootstrap() {
       bufferLogs: true, // Buffer logs until logger is set up
     });
 
+    // app.use(cookie)
     // Get app config
     const appCfg = app.get<ConfigType<typeof appConfig>>(appConfig.KEY);
 
