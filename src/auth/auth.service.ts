@@ -3,7 +3,6 @@ import { RegisterDto } from './dto/register.dto';
 import { UsersService } from 'app/users/users.service';
 import { PrismaService } from 'app/prisma/prisma.service';
 import {
-  ApiResponse,
   ConflictError,
   NotFoundError,
   ValidationError,
@@ -17,7 +16,6 @@ import { BcryptService } from 'app/common/helpers/bcrypt.util';
 import { CodeService } from 'app/common/helpers/code.util';
 import { user_status, User } from '@prisma/client';
 import { TokenService } from './token.service';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 export interface AuthResponse {
   access_token: string;
@@ -59,7 +57,7 @@ export class AuthService {
     private readonly tokenService: TokenService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<ApiResponse<null>> {
+  async register(dto: RegisterDto): Promise<void> {
     await this.validateUserDoesNotExist(dto.email, dto.username);
 
     const { code, expiredAt } = this.codeService.generateCodeWithExpiry();
@@ -76,14 +74,9 @@ export class AuthService {
     });
 
     this.sendVerificationEmailAsync(dto.email, code, expiredAt);
-
-    return ApiResponse.success(
-      null,
-      'Account registered successfully. Please check your email for verification.',
-    );
   }
 
-  async verifyEmail(dto: VerifyEmailDto): Promise<ApiResponse<null>> {
+  async verifyEmail(dto: VerifyEmailDto): Promise<void> {
     const user = await this.findUserByEmail(dto.email);
 
     if (user.is_verified) {
@@ -100,13 +93,9 @@ export class AuthService {
         is_verified: true,
       },
     });
-
-    return ApiResponse.success(null, 'Email verified successfully');
   }
 
-  async resendVerificationEmail(
-    dto: EmailRequestDto,
-  ): Promise<ApiResponse<null>> {
+  async resendVerificationEmail(dto: EmailRequestDto): Promise<void> {
     const user = await this.findUserByEmail(dto.email);
 
     if (user.is_verified) {
@@ -124,11 +113,9 @@ export class AuthService {
     });
 
     this.sendVerificationEmailAsync(dto.email, code, expiredAt);
-
-    return ApiResponse.success(null, 'Verification email sent successfully');
   }
 
-  async login(dto: LoginDto): Promise<ApiResponse<AuthResponse>> {
+  async login(dto: LoginDto): Promise<AuthResponse> {
     const user = await this.userService.findByEmailOrUsername(
       dto.usernameOrEmail,
     );
@@ -150,16 +137,22 @@ export class AuthService {
     const tokens = this.tokenService.generateTokenPair({
       id: user.id,
       email: user.email,
+      role: user.role,
+      status: user.status,
+      username: user.username,
     });
 
     await this.updateUserRefreshToken(user.id, tokens.refresh_token);
 
-    return ApiResponse.success({ ...tokens, user }, 'Login successful');
+    return {
+      ...tokens,
+      user,
+    };
   }
 
-  async forgotPassword(dto: EmailRequestDto): Promise<ApiResponse<null>> {
+  async forgotPassword(dto: EmailRequestDto): Promise<void> {
     const user = await this.findUserByEmail(dto.email);
-    const { code, expiredAt } = this.codeService.generateCodeWithExpiry();
+    const { code, expiredAt } = this.codeService.generateCodeWithExpiry(6, 2);
 
     await this.prismaService.user.update({
       where: { id: user.id },
@@ -170,11 +163,9 @@ export class AuthService {
     });
 
     this.sendPasswordResetEmailAsync(dto.email, code, expiredAt);
-
-    return ApiResponse.success(null, 'Password reset code sent successfully');
   }
 
-  async resetPassword(dto: ResetPasswordDto): Promise<ApiResponse<null>> {
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
     const user = await this.prismaService.user.findFirst({
       where: {
         password_reset_code: dto.resetToken,
@@ -201,21 +192,18 @@ export class AuthService {
         password: hashedPassword,
         password_reset_code: null,
         password_reset_code_expired: null,
-        // Clear refresh token on password reset for security
         refresh_token: null,
       },
     });
-
-    return ApiResponse.success(null, 'Password reset successfully');
   }
 
-  async refreshToken(dto: RefreshTokenDto): Promise<ApiResponse<AuthResponse>> {
-    const payload = this.tokenService.verifyRefreshToken(dto.refresh_token);
+  async refreshToken(refreshToken: string): Promise<AuthResponse> {
+    const payload = this.tokenService.verifyRefreshToken(refreshToken);
 
     const user = await this.prismaService.user.findUnique({
       where: {
         id: payload.id,
-        refresh_token: dto.refresh_token,
+        refresh_token: refreshToken,
       },
     });
 
@@ -228,23 +216,24 @@ export class AuthService {
     const tokens = this.tokenService.generateTokenPair({
       id: user.id,
       email: user.email,
+      role: user.role,
+      status: user.status,
+      username: user.username,
     });
 
     await this.updateUserRefreshToken(user.id, tokens.refresh_token);
 
-    return ApiResponse.success(
-      { ...tokens, user },
-      'Token refreshed successfully',
-    );
+    return {
+      ...tokens,
+      user,
+    };
   }
 
-  async logout(userId: string): Promise<ApiResponse<null>> {
+  async logout(userId: string): Promise<void> {
     await this.prismaService.user.update({
       where: { id: userId },
       data: { refresh_token: null },
     });
-
-    return ApiResponse.success(null, 'Logged out successfully');
   }
 
   // Private helper methods

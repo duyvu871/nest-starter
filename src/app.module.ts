@@ -19,6 +19,10 @@ import { UsersModule } from './users/users.module';
 import { JobsModule } from './jobs/jobs.module';
 import { AuthModule } from './auth/auth.module';
 import { DocsModule } from './docs/docs.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RolesGuard } from './auth/guards/roles.guard';
+import { TokenService } from './auth/token.service';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -66,6 +70,19 @@ import { HealthModule } from './health/health.module';
     DocsModule,
     HealthModule,
   ],
-  providers: [HttpLogInterceptor, ResponseInterceptor, AllExceptionsFilter],
+  providers: [
+    TokenService,
+    HttpLogInterceptor,
+    ResponseInterceptor,
+    AllExceptionsFilter,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+  ],
 })
 export class AppModule {}

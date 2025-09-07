@@ -70,7 +70,7 @@ export class HealthController {
   @Get('detailed')
   @ApiSuccess('Detailed health check completed')
   @HealthCheck()
-  async checkDetailed() {
+  checkDetailed() {
     if (!this.isHealthEndpointAllowed()) {
       throw new NotFoundError('Health endpoint not available in production');
     }
