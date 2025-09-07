@@ -656,3 +656,180 @@ For breaking changes, add an exclamation mark before the colon:
 ```
 feat(api)!: change response format of user endpoints
 ```
+
+## Health Checks
+
+The application includes comprehensive health check endpoints for monitoring and diagnostics. The health module provides multiple endpoints to check various aspects of the system.
+
+### Health Check Endpoints
+
+#### Basic Health Check
+```bash
+GET /health
+```
+
+Returns basic health status including system, memory, and application status.
+
+#### Detailed Health Check
+```bash
+GET /health/detailed
+```
+
+Comprehensive health check including database, memory, and disk usage.
+
+#### Specific Health Checks
+```bash
+GET /health/database    # Database connectivity
+GET /health/memory      # Memory usage
+GET /health/live        # Liveness probe
+GET /health/ready       # Readiness probe
+GET /health/system      # System information
+GET /health/metrics     # Prometheus metrics
+```
+
+### Health Check Response
+
+**Healthy Response:**
+```json
+{
+  "status": "ok",
+  "info": {
+    "system": {
+      "status": "up"
+    },
+    "memory_heap": {
+      "status": "up",
+      "heapUsed": 45000000,
+      "heapUsedMB": 43
+    },
+    "memory_rss": {
+      "status": "up",
+      "rss": 120000000,
+      "rssMB": 114
+    }
+  },
+  "details": {
+    "system": {
+      "status": "up",
+      "platform": "linux",
+      "uptime": 3600
+    }
+  }
+}
+```
+
+**Unhealthy Response:**
+```json
+{
+  "status": "error",
+  "error": {
+    "database": {
+      "status": "down",
+      "error": "Connection timeout"
+    }
+  }
+}
+```
+
+### Health Indicators
+
+The health module includes several indicators:
+
+- **DatabaseHealthIndicator**: Checks database connectivity and query performance
+- **MemoryHealthIndicator**: Monitors heap and RSS memory usage
+- **DiskHealthIndicator**: Checks disk space and file system permissions
+- **SystemHealthIndicator**: Monitors system load, uptime, and process health
+
+### Configuration
+
+#### Environment Variables
+
+Control health endpoints visibility in production:
+
+```bash
+# Enable detailed health endpoints in production
+HEALTH_ENDPOINTS_ENABLED=true
+
+# Default: false (only /health/live available in production)
+HEALTH_ENDPOINTS_ENABLED=false
+```
+
+#### Health Check Thresholds
+
+Health check thresholds can be configured in the health indicators:
+
+```typescript
+// Memory threshold (150MB)
+() => this.memory.checkHeap('memory_heap', 150 * 1024 * 1024)
+
+// Disk usage threshold (90%)
+() => this.disk.checkStorage('storage', {
+  path: process.cwd(),
+  thresholdPercent: 90
+})
+```
+
+#### Production Setup
+
+In production, only the `/health/live` endpoint is available by default for security:
+
+```bash
+# ✅ Always available in production
+GET /health/live
+
+# ❌ Disabled in production (returns error)
+GET /health
+GET /health/detailed
+GET /health/database
+GET /health/memory
+GET /health/system
+GET /health/ready
+GET /health/metrics
+```
+
+To enable detailed endpoints in production:
+
+```bash
+# Set in your production environment
+HEALTH_ENDPOINTS_ENABLED=true
+```
+
+**Security Best Practice:** Keep `HEALTH_ENDPOINTS_ENABLED=false` in production to minimize information disclosure.
+
+### Kubernetes Integration
+
+The health endpoints are designed for Kubernetes liveness and readiness probes:
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+```
+
+### Monitoring Integration
+
+The `/health/metrics` endpoint provides Prometheus-compatible metrics for monitoring systems.
+
+### Custom Health Checks
+
+You can extend the health module by creating custom health indicators:
+
+```typescript
+@Injectable()
+export class CustomHealthIndicator extends HealthIndicator {
+  async checkCustom(key: string): Promise<HealthIndicatorResult> {
+    // Your custom health check logic
+    return this.getStatus(key, isHealthy, { /* details */ });
+  }
+}
+```

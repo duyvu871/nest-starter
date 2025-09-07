@@ -19,6 +19,7 @@ import { UsersModule } from './users/users.module';
 import { JobsModule } from './jobs/jobs.module';
 import { AuthModule } from './auth/auth.module';
 import { DocsModule } from './docs/docs.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { DocsModule } from './docs/docs.module';
     ScheduleModule.forRoot(),
     JobsModule,
     DocsModule,
+    HealthModule,
   ],
   providers: [HttpLogInterceptor, ResponseInterceptor, AllExceptionsFilter],
 })
