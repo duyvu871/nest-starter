@@ -285,6 +285,102 @@ make prod
 npm run start:prod
 ```
 
+## Tailwind CSS
+
+The project uses Tailwind CSS v4 for styling. Here are the available commands:
+
+### Development
+
+```bash
+# Run Tailwind in watch mode (auto-rebuild on changes)
+make tw-dev
+# or
+npm run tw:dev
+
+# Run full development (NestJS + Tailwind auto-reload)
+make dev-full
+# or
+npm run dev:full
+```
+
+### Building
+
+```bash
+# Build Tailwind for production (minified)
+make tw-build
+# or
+npm run tw:build
+
+# Build Tailwind for development (non-minified)
+make tw-build-dev
+# or
+npm run tw:build:dev
+
+# Build full application (Tailwind + NestJS)
+make build-full
+# or
+npm run build:full
+```
+
+### Utilities
+
+```bash
+# Clean Tailwind output file
+make tw-clean
+# or
+npm run tw:clean
+
+# Build with content purging (removes unused CSS)
+make tw-purge
+# or
+npm run tw:purge
+```
+
+### Configuration
+
+Tailwind is configured in `tailwind.config.mts` with content paths for:
+- `src/**/*.ts` - TypeScript files
+- `views/**/*.hbs` - Handlebars templates
+- `views/**/*.ejs` - EJS templates
+- `src/docs/templates/**/*.hbs` - Documentation templates
+- `public/**/*.html` - Static HTML files
+
+## Documentation Templates
+
+The project includes styled Handlebars templates for documentation:
+
+### Sidebar Features
+
+- **Responsive Design**: Adapts to different screen sizes
+- **Dark Mode**: Automatic dark/light theme support
+- **Category Grouping**: Organized navigation with folder icons
+- **Active States**: Visual indication of current page
+- **Search Bar**: Quick navigation through documentation
+- **Smooth Animations**: Enhanced user experience
+- **Accessibility**: Screen reader support and keyboard navigation
+
+### Template Structure
+
+```
+src/docs/templates/
+├── layout.hbs          # Main layout with sidebar
+└── partials/
+    └── sidebar.hbs     # Navigation sidebar component
+```
+
+### Custom Styling
+
+Additional CSS is available in `public/assets/css/sidebar.css` for:
+- Custom scrollbars
+- Mobile responsiveness
+- Animation effects
+- High contrast mode support
+- Print-friendly styles
+
+### Demo
+
+View the styled sidebar demo at `/demo-sidebar.html` when running the application.
+
 ## Testing
 
 ### Unit and E2E Tests
