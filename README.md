@@ -381,6 +381,126 @@ Additional CSS is available in `public/assets/css/sidebar.css` for:
 
 View the styled sidebar demo at `/demo-sidebar.html` when running the application.
 
+## API Response Decorators
+
+The project includes powerful decorators to automatically wrap API responses with `ApiResponse.success()`. These decorators provide a clean and declarative way to customize API responses.
+
+## Response Types Architecture
+
+The project uses a unified type system for all response-related functionality:
+
+### Core Response Types (`src/common/types/response.types.ts`)
+
+- **`BaseResponse`**: Base interface for all API responses
+- **`SuccessResponse<T>`**: Interface for successful responses
+- **`ErrorResponse`**: Interface for error responses
+- **`PaginatedSuccessResponse<T>`**: Interface for paginated responses
+- **`RawResponse<T>`**: Interface for bypassing response wrapping
+- **`ApiResponseOptions`**: Configuration options for decorators
+- **`ApiResponseMetadata`**: Metadata types for decorator system
+
+### Available Decorators
+
+#### `@ApiSuccess(message?, options?)`
+Automatically wraps responses with `ApiResponse.success()` and custom message.
+
+```typescript
+@ApiSuccess('User created successfully')
+@Post('users')
+async createUser(@Body() data: CreateUserDto) {
+  return await this.userService.create(data);
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User created successfully",
+  "data": { "id": 1, "name": "John Doe" }
+}
+```
+
+#### `@ApiResponse(statusCode, message?, options?)`
+Creates custom responses with specific HTTP status codes.
+
+```typescript
+@ApiResponse(201, 'Resource created successfully')
+@Post('resources')
+async createResource(@Body() data: any) {
+  return await this.resourceService.create(data);
+}
+```
+
+#### `@ApiError(message?, statusCode?)`
+Creates error responses with custom messages and status codes.
+
+```typescript
+@ApiError('Validation failed', 400)
+@Post('validate')
+async validateData(@Body() data: any) {
+  if (!data.name) {
+    throw new Error('Name is required');
+  }
+  return { valid: true };
+}
+```
+
+#### `@RawResponse()`
+Bypasses automatic `ApiResponse` wrapping for raw responses.
+
+```typescript
+@RawResponse()
+@Get('file')
+async getFile() {
+  return this.fileService.getFileStream();
+}
+```
+
+### Advanced Options
+
+#### Custom Metadata
+```typescript
+@ApiSuccess('Data retrieved', {
+  metadata: { total: 100, page: 1 },
+  statusCode: 200,
+  includeRequestId: true
+})
+```
+
+#### Custom Headers
+```typescript
+@ApiSuccess('Data with headers', {
+  headers: {
+    'X-Custom-Header': 'value',
+    'Cache-Control': 'no-cache'
+  }
+})
+```
+
+#### Response Transformation
+```typescript
+@ApiSuccess('Transformed data', {
+  transform: (response) => ({
+    ...response,
+    timestamp: new Date().toISOString()
+  })
+})
+```
+
+### Examples
+
+See `src/docs/examples/api-decorators.example.ts` for comprehensive usage examples.
+
+### Priority Order
+
+When multiple decorators are applied to the same method, they are processed in this order:
+1. `@RawResponse()` - Bypasses all wrapping
+2. `@ApiError()` - Creates error response
+3. `@ApiResponse()` - Creates custom response
+4. `@ApiSuccess()` - Creates success response
+5. Default wrapping - Standard `ApiResponse.success()`
+
 ## Testing
 
 ### Unit and E2E Tests
@@ -535,4 +655,181 @@ For breaking changes, add an exclamation mark before the colon:
 
 ```
 feat(api)!: change response format of user endpoints
+```
+
+## Health Checks
+
+The application includes comprehensive health check endpoints for monitoring and diagnostics. The health module provides multiple endpoints to check various aspects of the system.
+
+### Health Check Endpoints
+
+#### Basic Health Check
+```bash
+GET /health
+```
+
+Returns basic health status including system, memory, and application status.
+
+#### Detailed Health Check
+```bash
+GET /health/detailed
+```
+
+Comprehensive health check including database, memory, and disk usage.
+
+#### Specific Health Checks
+```bash
+GET /health/database    # Database connectivity
+GET /health/memory      # Memory usage
+GET /health/live        # Liveness probe
+GET /health/ready       # Readiness probe
+GET /health/system      # System information
+GET /health/metrics     # Prometheus metrics
+```
+
+### Health Check Response
+
+**Healthy Response:**
+```json
+{
+  "status": "ok",
+  "info": {
+    "system": {
+      "status": "up"
+    },
+    "memory_heap": {
+      "status": "up",
+      "heapUsed": 45000000,
+      "heapUsedMB": 43
+    },
+    "memory_rss": {
+      "status": "up",
+      "rss": 120000000,
+      "rssMB": 114
+    }
+  },
+  "details": {
+    "system": {
+      "status": "up",
+      "platform": "linux",
+      "uptime": 3600
+    }
+  }
+}
+```
+
+**Unhealthy Response:**
+```json
+{
+  "status": "error",
+  "error": {
+    "database": {
+      "status": "down",
+      "error": "Connection timeout"
+    }
+  }
+}
+```
+
+### Health Indicators
+
+The health module includes several indicators:
+
+- **DatabaseHealthIndicator**: Checks database connectivity and query performance
+- **MemoryHealthIndicator**: Monitors heap and RSS memory usage
+- **DiskHealthIndicator**: Checks disk space and file system permissions
+- **SystemHealthIndicator**: Monitors system load, uptime, and process health
+
+### Configuration
+
+#### Environment Variables
+
+Control health endpoints visibility in production:
+
+```bash
+# Enable detailed health endpoints in production
+HEALTH_ENDPOINTS_ENABLED=true
+
+# Default: false (only /health/live available in production)
+HEALTH_ENDPOINTS_ENABLED=false
+```
+
+#### Health Check Thresholds
+
+Health check thresholds can be configured in the health indicators:
+
+```typescript
+// Memory threshold (150MB)
+() => this.memory.checkHeap('memory_heap', 150 * 1024 * 1024)
+
+// Disk usage threshold (90%)
+() => this.disk.checkStorage('storage', {
+  path: process.cwd(),
+  thresholdPercent: 90
+})
+```
+
+#### Production Setup
+
+In production, only the `/health/live` endpoint is available by default for security:
+
+```bash
+# ✅ Always available in production
+GET /health/live
+
+# ❌ Disabled in production (returns error)
+GET /health
+GET /health/detailed
+GET /health/database
+GET /health/memory
+GET /health/system
+GET /health/ready
+GET /health/metrics
+```
+
+To enable detailed endpoints in production:
+
+```bash
+# Set in your production environment
+HEALTH_ENDPOINTS_ENABLED=true
+```
+
+**Security Best Practice:** Keep `HEALTH_ENDPOINTS_ENABLED=false` in production to minimize information disclosure.
+
+### Kubernetes Integration
+
+The health endpoints are designed for Kubernetes liveness and readiness probes:
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+```
+
+### Monitoring Integration
+
+The `/health/metrics` endpoint provides Prometheus-compatible metrics for monitoring systems.
+
+### Custom Health Checks
+
+You can extend the health module by creating custom health indicators:
+
+```typescript
+@Injectable()
+export class CustomHealthIndicator extends HealthIndicator {
+  async checkCustom(key: string): Promise<HealthIndicatorResult> {
+    // Your custom health check logic
+    return this.getStatus(key, isHealthy, { /* details */ });
+  }
+}
 ```
