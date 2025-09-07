@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RegisterDto } from './dto/register.dto';
 import { UsersService } from 'app/users/users.service';
 import { PrismaService } from 'app/prisma/prisma.service';
@@ -16,12 +15,41 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { BcryptService } from 'app/common/helpers/bcrypt.util';
 import { CodeService } from 'app/common/helpers/code.util';
-import { user_status } from '@prisma/client';
+import { user_status, User } from '@prisma/client';
 import { TokenService } from './token.service';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 
+export interface AuthResponse {
+  access_token: string;
+  refresh_token: string;
+  user: User;
+}
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
+  private readonly errorMessages = {
+    // Authentication
+    INVALID_CREDENTIALS: 'Invalid email/username or password',
+    INVALID_REFRESH_TOKEN: 'Invalid or expired refresh token',
+    INVALID_ACCESS_TOKEN: 'Invalid or expired access token',
+
+    // Verification
+    INVALID_VALIDATION_CODE: 'Invalid verification code',
+    CODE_EXPIRED: 'Verification code has expired',
+
+    // Account Status
+    ACCOUNT_INACTIVE: 'Account is inactive. Please contact support',
+    EMAIL_NOT_VERIFIED: 'Please verify your email before logging in',
+    EMAIL_ALREADY_VERIFIED: 'Email is already verified',
+
+    // User Management
+    USER_NOT_FOUND: 'User not found',
+    EMAIL_ALREADY_EXISTS: 'An account with this email already exists',
+    USERNAME_ALREADY_EXISTS: 'Username is already taken',
+  } as const;
+
   constructor(
     private readonly userService: UsersService,
     private readonly prismaService: PrismaService,
@@ -31,55 +59,39 @@ export class AuthService {
     private readonly tokenService: TokenService,
   ) {}
 
-  async register(dto: RegisterDto) {
-    const hasEmail = await this.userService.findByEmail(dto.email);
-    const hasUsername = await this.userService.findByUsername(dto.username);
-
-    if (hasEmail) {
-      throw new ConflictError('Email already exists');
-    }
-
-    if (hasUsername) {
-      throw new ConflictError('Username already exists');
-    }
+  async register(dto: RegisterDto): Promise<ApiResponse<null>> {
+    await this.validateUserDoesNotExist(dto.email, dto.username);
 
     const { code, expiredAt } = this.codeService.generateCodeWithExpiry();
     const hashedPassword = await this.bcryptService.hashPassword(dto.password);
 
-    // create user
     await this.prismaService.user.create({
       data: {
-        ...dto,
+        email: dto.email,
+        username: dto.username,
         password: hashedPassword,
         verification_code: code,
         verification_code_expired: expiredAt,
       },
     });
 
-    // send email
-    setImmediate(() => {
-      this.emailService
-        .sendVerificationEmail(dto.email, code, expiredAt)
-        .catch((err) => console.log(err));
-    });
+    this.sendVerificationEmailAsync(dto.email, code, expiredAt);
 
-    return ApiResponse.success(null, 'Account registered successfully');
+    return ApiResponse.success(
+      null,
+      'Account registered successfully. Please check your email for verification.',
+    );
   }
 
-  async verifyEmail(dto: VerifyEmailDto) {
-    const user = await this.userService.findByEmail(dto.email);
-    if (!user) {
-      throw new NotFoundError('User not found');
+  async verifyEmail(dto: VerifyEmailDto): Promise<ApiResponse<null>> {
+    const user = await this.findUserByEmail(dto.email);
+
+    if (user.is_verified) {
+      throw new ValidationError(this.errorMessages.EMAIL_ALREADY_VERIFIED);
     }
-    if (user.verification_code !== dto.code) {
-      throw new ValidationError('Invalid verification code');
-    }
-    if (
-      !user.verification_code_expired ||
-      this.codeService.isCodeExpired(user.verification_code_expired)
-    ) {
-      throw new ValidationError('Verification code expired');
-    }
+
+    this.validateVerificationCode(user, dto.code);
+
     await this.prismaService.user.update({
       where: { id: user.id },
       data: {
@@ -88,15 +100,21 @@ export class AuthService {
         is_verified: true,
       },
     });
+
     return ApiResponse.success(null, 'Email verified successfully');
   }
 
-  async resendVerificationEmail(dto: EmailRequestDto) {
-    const user = await this.userService.findByEmail(dto.email);
-    if (!user) {
-      throw new NotFoundError('User not found');
+  async resendVerificationEmail(
+    dto: EmailRequestDto,
+  ): Promise<ApiResponse<null>> {
+    const user = await this.findUserByEmail(dto.email);
+
+    if (user.is_verified) {
+      throw new ValidationError(this.errorMessages.EMAIL_ALREADY_VERIFIED);
     }
+
     const { code, expiredAt } = this.codeService.generateCodeWithExpiry();
+
     await this.prismaService.user.update({
       where: { id: user.id },
       data: {
@@ -104,59 +122,45 @@ export class AuthService {
         verification_code_expired: expiredAt,
       },
     });
-    setImmediate(() => {
-      this.emailService
-        .sendVerificationEmail(dto.email, code, expiredAt)
-        .catch((err) => console.log(err));
-    });
+
+    this.sendVerificationEmailAsync(dto.email, code, expiredAt);
+
     return ApiResponse.success(null, 'Verification email sent successfully');
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto): Promise<ApiResponse<AuthResponse>> {
     const user = await this.userService.findByEmailOrUsername(
       dto.usernameOrEmail,
     );
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError(this.errorMessages.INVALID_CREDENTIALS);
     }
-    const isPasswordMatch = await this.bcryptService.comparePassword(
+
+    const isPasswordValid = await this.bcryptService.comparePassword(
       dto.password,
       user.password,
     );
-    if (!isPasswordMatch) {
-      throw new ValidationError('Invalid credentials');
+
+    if (!isPasswordValid) {
+      throw new ValidationError(this.errorMessages.INVALID_CREDENTIALS);
     }
-    if (!user.is_verified) {
-      throw new ValidationError('Email not verified. Please verify your email');
-    }
-    if (user.status !== user_status.ACTIVE) {
-      throw new ValidationError('Account is not active');
-    }
-    // payload for token
-    const { access_token, refresh_token } = this.tokenService.generateTokenPair(
-      {
-        id: user.id,
-        email: user.email,
-      },
-    );
-    await this.prismaService.user.update({
-      where: { id: user.id },
-      data: {
-        refresh_token,
-      },
+
+    this.validateUserCanLogin(user);
+
+    const tokens = this.tokenService.generateTokenPair({
+      id: user.id,
+      email: user.email,
     });
-    return ApiResponse.success(
-      { access_token, refresh_token, user },
-      'Login successful',
-    );
+
+    await this.updateUserRefreshToken(user.id, tokens.refresh_token);
+
+    return ApiResponse.success({ ...tokens, user }, 'Login successful');
   }
 
-  async forgotPassword(dto: EmailRequestDto) {
-    const user = await this.userService.findByEmail(dto.email);
-    if (!user) {
-      throw new NotFoundError('User not found');
-    }
+  async forgotPassword(dto: EmailRequestDto): Promise<ApiResponse<null>> {
+    const user = await this.findUserByEmail(dto.email);
     const { code, expiredAt } = this.codeService.generateCodeWithExpiry();
+
     await this.prismaService.user.update({
       where: { id: user.id },
       data: {
@@ -164,76 +168,192 @@ export class AuthService {
         password_reset_code_expired: expiredAt,
       },
     });
-    setImmediate(() => {
-      this.emailService
-        .sendForgotPasswordEmail(dto.email, code, expiredAt)
-        .catch((err) => console.log(err));
-    });
+
+    this.sendPasswordResetEmailAsync(dto.email, code, expiredAt);
+
     return ApiResponse.success(null, 'Password reset code sent successfully');
   }
 
-  async resetPassword(dto: ResetPasswordDto) {
+  async resetPassword(dto: ResetPasswordDto): Promise<ApiResponse<null>> {
     const user = await this.prismaService.user.findFirst({
       where: {
         password_reset_code: dto.resetToken,
       },
     });
+
     if (!user) {
-      throw new ValidationError('Invalid password reset code');
+      throw new ValidationError(this.errorMessages.INVALID_VALIDATION_CODE);
     }
+
     if (
       !user.password_reset_code_expired ||
       this.codeService.isCodeExpired(user.password_reset_code_expired)
     ) {
-      await this.prismaService.user.update({
-        where: { id: user.id },
-        data: {
-          password_reset_code: null,
-          password_reset_code_expired: null,
-        },
-      });
-      throw new ValidationError('Password reset code expired');
+      await this.clearPasswordResetCode(user.id);
+      throw new ValidationError(this.errorMessages.CODE_EXPIRED);
     }
+
+    const hashedPassword = await this.bcryptService.hashPassword(dto.password);
+
     await this.prismaService.user.update({
       where: { id: user.id },
       data: {
-        password: await this.bcryptService.hashPassword(dto.password),
+        password: hashedPassword,
         password_reset_code: null,
         password_reset_code_expired: null,
+        // Clear refresh token on password reset for security
+        refresh_token: null,
       },
     });
+
     return ApiResponse.success(null, 'Password reset successfully');
   }
 
-  async refreshToken(dto: RefreshTokenDto) {
+  async refreshToken(dto: RefreshTokenDto): Promise<ApiResponse<AuthResponse>> {
     const payload = this.tokenService.verifyRefreshToken(dto.refresh_token);
+
     const user = await this.prismaService.user.findUnique({
       where: {
         id: payload.id,
         refresh_token: dto.refresh_token,
       },
     });
+
     if (!user) {
-      throw new ValidationError('Invalid refresh token');
+      throw new ValidationError(this.errorMessages.INVALID_REFRESH_TOKEN);
     }
-    const { access_token, refresh_token } = this.tokenService.generateTokenPair(
-      {
-        id: user.id,
-        email: user.email,
-      },
-    );
-    await this.prismaService.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        refresh_token,
-      },
+
+    this.validateUserCanLogin(user);
+
+    const tokens = this.tokenService.generateTokenPair({
+      id: user.id,
+      email: user.email,
     });
+
+    await this.updateUserRefreshToken(user.id, tokens.refresh_token);
+
     return ApiResponse.success(
-      { access_token, refresh_token, user },
-      'Refresh token successful',
+      { ...tokens, user },
+      'Token refreshed successfully',
     );
   }
-  async logout() {}
+
+  async logout(userId: string): Promise<ApiResponse<null>> {
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: { refresh_token: null },
+    });
+
+    return ApiResponse.success(null, 'Logged out successfully');
+  }
+
+  // Private helper methods
+  private async validateUserDoesNotExist(
+    email: string,
+    username: string,
+  ): Promise<void> {
+    const [existingEmail, existingUsername] = await Promise.all([
+      this.userService.findByEmail(email),
+      this.userService.findByUsername(username),
+    ]);
+
+    if (existingEmail) {
+      throw new ConflictError(this.errorMessages.EMAIL_ALREADY_EXISTS);
+    }
+
+    if (existingUsername) {
+      throw new ConflictError(this.errorMessages.USERNAME_ALREADY_EXISTS);
+    }
+  }
+
+  private async findUserByEmail(email: string): Promise<User> {
+    const user = await this.userService.findByEmail(email);
+    if (!user) {
+      throw new NotFoundError(this.errorMessages.USER_NOT_FOUND);
+    }
+    return user;
+  }
+
+  private validateVerificationCode(user: User, code: string): void {
+    if (user.verification_code !== code) {
+      throw new ValidationError(this.errorMessages.INVALID_VALIDATION_CODE);
+    }
+
+    if (
+      !user.verification_code_expired ||
+      this.codeService.isCodeExpired(user.verification_code_expired)
+    ) {
+      throw new ValidationError(this.errorMessages.CODE_EXPIRED);
+    }
+  }
+
+  private validateUserCanLogin(user: User): void {
+    if (!user.is_verified) {
+      throw new ValidationError(this.errorMessages.EMAIL_NOT_VERIFIED);
+    }
+
+    if (user.status !== user_status.ACTIVE) {
+      throw new ValidationError(this.errorMessages.ACCOUNT_INACTIVE);
+    }
+  }
+
+  private async updateUserRefreshToken(
+    userId: string,
+    refreshToken: string,
+  ): Promise<void> {
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: { refresh_token: refreshToken },
+    });
+  }
+
+  private async clearPasswordResetCode(userId: string): Promise<void> {
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        password_reset_code: null,
+        password_reset_code_expired: null,
+      },
+    });
+  }
+
+  private sendVerificationEmailAsync(
+    email: string,
+    code: string,
+    expiredAt: Date,
+  ): void {
+    setImmediate(() => {
+      this.emailService
+        .sendVerificationEmail(email, code, expiredAt)
+        .then(() => {
+          this.logger.log(`Verification email sent to: ${email}`);
+        })
+        .catch((error) => {
+          this.logger.error(
+            `Failed to send verification email to ${email}:`,
+            error,
+          );
+        });
+    });
+  }
+
+  private sendPasswordResetEmailAsync(
+    email: string,
+    code: string,
+    expiredAt: Date,
+  ): void {
+    setImmediate(() => {
+      this.emailService
+        .sendForgotPasswordEmail(email, code, expiredAt)
+        .then(() => {
+          this.logger.log(`Password reset email sent to: ${email}`);
+        })
+        .catch((error) => {
+          this.logger.error(
+            `Failed to send password reset email to ${email}:`,
+            error,
+          );
+        });
+    });
+  }
 }
