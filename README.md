@@ -381,6 +381,126 @@ Additional CSS is available in `public/assets/css/sidebar.css` for:
 
 View the styled sidebar demo at `/demo-sidebar.html` when running the application.
 
+## API Response Decorators
+
+The project includes powerful decorators to automatically wrap API responses with `ApiResponse.success()`. These decorators provide a clean and declarative way to customize API responses.
+
+## Response Types Architecture
+
+The project uses a unified type system for all response-related functionality:
+
+### Core Response Types (`src/common/types/response.types.ts`)
+
+- **`BaseResponse`**: Base interface for all API responses
+- **`SuccessResponse<T>`**: Interface for successful responses
+- **`ErrorResponse`**: Interface for error responses
+- **`PaginatedSuccessResponse<T>`**: Interface for paginated responses
+- **`RawResponse<T>`**: Interface for bypassing response wrapping
+- **`ApiResponseOptions`**: Configuration options for decorators
+- **`ApiResponseMetadata`**: Metadata types for decorator system
+
+### Available Decorators
+
+#### `@ApiSuccess(message?, options?)`
+Automatically wraps responses with `ApiResponse.success()` and custom message.
+
+```typescript
+@ApiSuccess('User created successfully')
+@Post('users')
+async createUser(@Body() data: CreateUserDto) {
+  return await this.userService.create(data);
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User created successfully",
+  "data": { "id": 1, "name": "John Doe" }
+}
+```
+
+#### `@ApiResponse(statusCode, message?, options?)`
+Creates custom responses with specific HTTP status codes.
+
+```typescript
+@ApiResponse(201, 'Resource created successfully')
+@Post('resources')
+async createResource(@Body() data: any) {
+  return await this.resourceService.create(data);
+}
+```
+
+#### `@ApiError(message?, statusCode?)`
+Creates error responses with custom messages and status codes.
+
+```typescript
+@ApiError('Validation failed', 400)
+@Post('validate')
+async validateData(@Body() data: any) {
+  if (!data.name) {
+    throw new Error('Name is required');
+  }
+  return { valid: true };
+}
+```
+
+#### `@RawResponse()`
+Bypasses automatic `ApiResponse` wrapping for raw responses.
+
+```typescript
+@RawResponse()
+@Get('file')
+async getFile() {
+  return this.fileService.getFileStream();
+}
+```
+
+### Advanced Options
+
+#### Custom Metadata
+```typescript
+@ApiSuccess('Data retrieved', {
+  metadata: { total: 100, page: 1 },
+  statusCode: 200,
+  includeRequestId: true
+})
+```
+
+#### Custom Headers
+```typescript
+@ApiSuccess('Data with headers', {
+  headers: {
+    'X-Custom-Header': 'value',
+    'Cache-Control': 'no-cache'
+  }
+})
+```
+
+#### Response Transformation
+```typescript
+@ApiSuccess('Transformed data', {
+  transform: (response) => ({
+    ...response,
+    timestamp: new Date().toISOString()
+  })
+})
+```
+
+### Examples
+
+See `src/docs/examples/api-decorators.example.ts` for comprehensive usage examples.
+
+### Priority Order
+
+When multiple decorators are applied to the same method, they are processed in this order:
+1. `@RawResponse()` - Bypasses all wrapping
+2. `@ApiError()` - Creates error response
+3. `@ApiResponse()` - Creates custom response
+4. `@ApiSuccess()` - Creates success response
+5. Default wrapping - Standard `ApiResponse.success()`
+
 ## Testing
 
 ### Unit and E2E Tests
