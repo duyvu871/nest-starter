@@ -11,6 +11,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { LoggerCoreModule, LoggerModule } from './common/logger';
 import { JobsModule } from './jobs/jobs.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { JobsModule } from './jobs/jobs.module';
     LoggerModule.forFeature(['HTTP', 'DATABASE', 'APP', 'EMAIL']),
     PrismaModule,
     UsersModule,
+    AuthModule,
     ScheduleModule.forRoot(),
     JobsModule,
   ],
