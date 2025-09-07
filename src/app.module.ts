@@ -25,10 +25,10 @@ import { DocsModule } from './docs/docs.module';
       // uploads assets
       {
         rootPath: join(process.cwd(), 'uploads'),
-        serveRoot: '/uploads',                 // http://host/uploads/...
+        serveRoot: '/uploads', // http://host/uploads/...
         serveStaticOptions: {
           index: false,
-          setHeaders: (res, path) => {
+          setHeaders: (res) => {
             res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
           },
         },
@@ -36,12 +36,12 @@ import { DocsModule } from './docs/docs.module';
       // public assets
       {
         rootPath: join(process.cwd(), 'public'),
-        serveRoot: '/assets',                 // http://host/public/...
+        serveRoot: '/assets', // http://host/public/...
       },
       // docs assets
       {
         rootPath: join(process.cwd(), 'public', 'docs'),
-        serveRoot: '/docs/assets',                 // http://host/docs/assets/...
+        serveRoot: '/docs/assets', // http://host/docs/assets/...
       },
     ),
     // config

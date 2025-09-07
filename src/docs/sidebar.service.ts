@@ -22,8 +22,14 @@ export class SidebarService {
         const sub = this.walkDir(path.join(dir, entry.name), base);
         items.push({ type: 'category', label: entry.name, items: sub });
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
-        const id = path.relative(base, path.join(dir, entry.name)).replace(/\.md$/, '');
-        items.push({ type: 'doc', label: path.basename(entry.name, '.md'), id });
+        const id = path
+          .relative(base, path.join(dir, entry.name))
+          .replace(/\.md$/, '');
+        items.push({
+          type: 'doc',
+          label: path.basename(entry.name, '.md'),
+          id,
+        });
       }
     }
     return items;
