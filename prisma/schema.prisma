@@ -222,7 +222,6 @@ model Product {
   inventories     Inventory[]
   tags            Tag[]
   stock_movements StockMovement[]
-  order           Order[]
   order_item      OrderItem[]
 
   // indexes
@@ -321,7 +320,6 @@ model StockMovement {
 model Order {
   id              String         @id @default(uuid()) @db.Uuid
   code            String?
-  product_id      String         @db.Uuid
   cashier_id      String         @db.Uuid
   customer_id     String?        @db.Uuid
   customer_name   String?
@@ -341,7 +339,6 @@ model Order {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   // relations
-  product         Product        @relation(fields: [product_id], references: [id], onDelete: Cascade)
   cashier         User           @relation(fields: [cashier_id], references: [id], onDelete: Cascade)
   customer        Customer?      @relation(fields: [customer_id], references: [id], onDelete: Cascade)
   order_item      OrderItem[]
@@ -349,7 +346,6 @@ model Order {
   // indexes
   @@index([cashier_id])
   @@index([customer_id])
-  @@index([product_id])
   @@index([status])
 
   @@map("order")
