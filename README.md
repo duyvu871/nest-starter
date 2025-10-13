@@ -1,6 +1,49 @@
-# Basic POS System
+# NestJS Starter with Authentication & User Management
 
-A basic point-of-sale system built with NestJS, Prisma, and PostgreSQL.
+A comprehensive NestJS starter project with JWT authentication, user management, email services, and modern development practices.
+
+## Features
+
+- **Authentication & Authorization**
+  - JWT access/refresh tokens with secure cookie handling
+  - Role-based access control (Admin, Staff, User)
+  - Email verification and password reset
+  - Rate limiting for auth endpoints
+
+- **User Management**
+  - Full CRUD operations for users
+  - Admin-only user management endpoints
+  - User roles and status management
+
+- **Email Integration**
+  - SMTP email service with Handlebars templates
+  - Verification and password reset emails
+  - Configurable email providers
+
+- **Database & ORM**
+  - Prisma ORM with PostgreSQL
+  - Database migrations and seeding
+  - Health checks for database connectivity
+
+- **Development Tools**
+  - Hot reload development setup
+  - Docker Compose for database
+  - Comprehensive health checks
+  - API response decorators
+  - Path aliases for clean imports
+
+- **Security & Performance**
+  - Rate limiting with @nestjs/throttler
+  - CORS configuration
+  - Input validation with class-validator
+  - Bcrypt password hashing
+
+## Prerequisites
+
+- Node.js (v18 or higher)
+- npm (v9 or higher)
+- Docker and Docker Compose
+- Make (optional, for using Makefile commands)
 
 ## Prerequisites
 
@@ -32,48 +75,81 @@ Each environment file should contain the following variables:
 
 ```
 # Environment
-NODE_ENV=development  # or test, production
+NODE_ENV=development
 
 # Application
-APP_NAME=nest-basic-prisma
+APP_NAME=nest-starter
 PORT=3000
 
 # Database
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/app?schema=public"
-```
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=app
+DB_SCHEMA=public
+DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?schema=${DB_SCHEMA}"
 
-For the test environment, you might want to use a different database:
+# JWT Configuration
+JWT_ACCESS_SECRET=your-super-secret-access-jwt-key-here
+JWT_REFRESH_SECRET=your-super-secret-refresh-jwt-key-here
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
 
-```
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/app_test?schema=public"
-```
+# Email Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+EMAIL_FROM="${APP_NAME} <${SMTP_USER}>"
+EMAIL_TEMPLATES_PATH=src/module/email/templates
 
-For production, you might want to use different credentials and port:
+# Rate Limiting
+RATE_LIMIT_TTL=60
+RATE_LIMIT_MAX=100
 
-```
-DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5554/app?schema=public"
+# Security
+BCRYPT_ROUNDS=12
+
+# Health Checks
+HEALTH_ENDPOINTS_ENABLED=false
+
+# CORS
+CORS_ORIGINS=http://localhost:3000,http://localhost:4200
 ```
 
 ## Project Structure
 
-The project follows a standard NestJS structure with some additional directories:
+The project follows a modular NestJS architecture:
 
 ```
 ├── prisma/               # Prisma schema and migrations
-│   ├── schema.prisma     # Database schema
-│   └── seed.ts           # Database seeding script
-├── scripts/              # Utility scripts
-│   ├── setup_dev_env.sh  # Development setup script
-│   ├── setup_test_env.sh # Test setup script
-│   └── setup_prod_env.sh # Production setup script
+│   ├── schema.prisma     # Database schema with User model
+├── scripts/              # Utility scripts for setup
 ├── src/
-│   ├── common/           # Common utilities, filters, interceptors
-│   ├── config/           # Configuration modules
-│   ├── prisma/           # Prisma service module
-│   ├── users/            # Users module
+│   ├── common/           # Shared utilities and decorators
+│   │   ├── decorators/   # Custom decorators (roles, public, API responses)
+│   │   ├── filters/      # Exception filters
+│   │   ├── helpers/      # Utility services (bcrypt, code generation)
+│   │   ├── interceptors/ # HTTP interceptors (logging, response)
+│   │   ├── logger/       # Logging system
+│   │   ├── response/     # Response types and success/error classes
+│   │   └── types/        # TypeScript type definitions
+│   ├── config/           # Configuration modules (JWT, email, database)
+│   ├── module/           # Feature modules
+│   │   ├── auth/         # Authentication module
+│   │   │   ├── dto/      # Data transfer objects
+│   │   │   ├── guards/   # JWT and roles guards
+│   │   │   └── token.service.ts # JWT token management
+│   │   ├── email/        # Email service with templates
+│   │   ├── health/       # Health check indicators
+│   │   ├── jobs/         # Background jobs
+│   │   └── user/         # User management module
 │   ├── app.module.ts     # Main application module
 │   └── main.ts           # Application entry point
-└── test/                 # E2E tests
+├── test/                 # E2E tests
+└── public/               # Static assets and email templates
 ```
 
 ## Quick Start
@@ -285,9 +361,40 @@ make prod
 npm run start:prod
 ```
 
-## Tailwind CSS
+## Security Features
 
-The project uses Tailwind CSS v4 for styling. Here are the available commands:
+### Rate Limiting
+
+The application uses `@nestjs/throttler` for rate limiting to prevent abuse:
+
+- **Global Rate Limiting**: 100 requests per minute (configurable via `RATE_LIMIT_MAX`)
+- **Auth Endpoints**: Specific limits for authentication operations
+  - Register: 5 requests/minute
+  - Login: 10 requests/minute
+  - Email verification: 5 requests/minute
+  - Password reset: 3 requests/minute
+
+### Authentication & Authorization
+
+- **JWT Tokens**: Access and refresh tokens with secure cookie handling
+- **Role-Based Access**: Three user roles (ADMIN, STAFF, USER)
+- **Email Verification**: Required for account activation
+- **Password Security**: Bcrypt hashing with configurable rounds
+- **Secure Cookies**: httpOnly, secure, sameSite cookies for refresh tokens
+
+### Input Validation
+
+- **Class Validator**: DTOs with validation decorators
+- **Custom Validators**: Match decorator for password confirmation
+- **Type Safety**: Full TypeScript support with strict mode
+
+### CORS Configuration
+
+Configurable CORS origins for cross-origin requests:
+
+```bash
+CORS_ORIGINS=http://localhost:3000,http://localhost:4200
+```
 
 ### Development
 
@@ -381,9 +488,156 @@ Additional CSS is available in `public/assets/css/sidebar.css` for:
 
 View the styled sidebar demo at `/demo-sidebar.html` when running the application.
 
-## API Response Decorators
+## API Documentation
 
-The project includes powerful decorators to automatically wrap API responses with `ApiResponse.success()`. These decorators provide a clean and declarative way to customize API responses.
+### Authentication Endpoints
+
+All auth endpoints are rate-limited to prevent abuse.
+
+#### Register User
+```http
+POST /auth/register
+Content-Type: application/json
+
+{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "password": "password123",
+  "confirmPassword": "password123"
+}
+```
+
+#### Login
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "johndoe",
+  "password": "password123"
+}
+```
+
+#### Verify Email
+```http
+POST /auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "code": "123456"
+}
+```
+
+#### Resend Verification Email
+```http
+POST /auth/reverify-email
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+```
+
+#### Forgot Password
+```http
+POST /auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+```
+
+#### Reset Password
+```http
+POST /auth/reset-password
+Content-Type: application/json
+
+{
+  "resetToken": "123456",
+  "password": "newpassword123"
+}
+```
+
+#### Refresh Token
+```http
+POST /auth/refresh-token
+```
+*Uses refresh token from httpOnly cookie*
+
+#### Logout
+```http
+POST /auth/logout
+Authorization: Bearer <access_token>
+```
+
+#### Get Profile
+```http
+GET /auth/profile
+Authorization: Bearer <access_token>
+```
+
+### User Management Endpoints (Admin Only)
+
+#### Get All Users
+```http
+GET /users
+Authorization: Bearer <admin_access_token>
+```
+
+#### Get User by ID
+```http
+GET /users/:id
+Authorization: Bearer <admin_access_token>
+```
+
+#### Update User
+```http
+PUT /users/:id
+Authorization: Bearer <admin_access_token>
+Content-Type: application/json
+
+{
+  "username": "newusername",
+  "email": "newemail@example.com",
+  "role": "STAFF",
+  "status": "ACTIVE"
+}
+```
+
+#### Delete User
+```http
+DELETE /users/:id
+Authorization: Bearer <admin_access_token>
+```
+
+### Health Check Endpoints
+
+#### Basic Health
+```http
+GET /health
+```
+
+#### Database Health
+```http
+GET /health/database
+```
+
+#### System Health
+```http
+GET /health/system
+```
+
+### Rate Limiting
+
+Auth endpoints are protected with rate limiting:
+- Register: 5 requests per minute
+- Login: 10 requests per minute
+- Email verification: 5 requests per minute
+- Password reset: 3 requests per minute
+
+Global rate limiting: 100 requests per minute (configurable via `RATE_LIMIT_MAX`)
 
 ## Response Types Architecture
 
@@ -398,6 +652,10 @@ The project uses a unified type system for all response-related functionality:
 - **`RawResponse<T>`**: Interface for bypassing response wrapping
 - **`ApiResponseOptions`**: Configuration options for decorators
 - **`ApiResponseMetadata`**: Metadata types for decorator system
+
+## API Response Decorators
+
+The project includes powerful decorators to automatically wrap API responses with `ApiResponse.success()`. These decorators provide a clean and declarative way to customize API responses.
 
 ### Available Decorators
 
@@ -417,7 +675,7 @@ async createUser(@Body() data: CreateUserDto) {
 {
   "success": true,
   "message": "User created successfully",
-  "data": { "id": 1, "name": "John Doe" }
+  "data": { "id": 1, "username": "johndoe" }
 }
 ```
 
@@ -439,8 +697,8 @@ Creates error responses with custom messages and status codes.
 @ApiError('Validation failed', 400)
 @Post('validate')
 async validateData(@Body() data: any) {
-  if (!data.name) {
-    throw new Error('Name is required');
+  if (!data.username) {
+    throw new Error('Username is required');
   }
   return { valid: true };
 }
@@ -488,10 +746,6 @@ async getFile() {
 })
 ```
 
-### Examples
-
-See `src/docs/examples/api-decorators.example.ts` for comprehensive usage examples.
-
 ### Priority Order
 
 When multiple decorators are applied to the same method, they are processed in this order:
@@ -500,6 +754,38 @@ When multiple decorators are applied to the same method, they are processed in t
 3. `@ApiResponse()` - Creates custom response
 4. `@ApiSuccess()` - Creates success response
 5. Default wrapping - Standard `ApiResponse.success()`
+
+## Development Tools
+
+### Path Aliases
+
+The project uses TypeScript path aliases for clean imports:
+
+```typescript
+// Instead of relative imports
+import { ApiSuccess } from '../../common/decorators';
+
+// Use path aliases
+import { ApiSuccess } from 'common/decorators';
+```
+
+Configured aliases in `tsconfig.json`:
+- `app/*` → `./src/*`
+- `common/*` → `./src/common/*`
+- `config/*` → `./src/config/*`
+- `module/*` → `./src/module/*`
+
+### Hot Reload & Development
+
+- **Auto-reload**: Changes trigger automatic server restart
+- **Source Maps**: Full debugging support
+- **TypeScript**: Strict mode with incremental compilation
+
+### Docker Integration
+
+- **Development**: Database runs in Docker, app runs locally
+- **Production**: Full containerization with Docker Compose
+- **Database**: PostgreSQL with persistent volumes
 
 ## Testing
 
@@ -833,3 +1119,45 @@ export class CustomHealthIndicator extends HealthIndicator {
   }
 }
 ```
+
+## Quick Start Summary
+
+This NestJS starter provides everything you need to build a secure, scalable application:
+
+### 🚀 **Ready-to-Use Features**
+- **Complete Authentication System** with JWT, email verification, and role-based access
+- **User Management** with full CRUD operations and admin controls
+- **Email Integration** with SMTP and Handlebars templates
+- **Database Layer** with Prisma ORM and PostgreSQL
+- **Security Features** including rate limiting, CORS, and input validation
+- **Health Monitoring** with comprehensive system checks
+- **Development Tools** with hot reload, Docker, and path aliases
+
+### 🛠 **Quick Setup**
+```bash
+# Clone and setup
+make setup-dev
+
+# Start developing
+make dev
+```
+
+### 📚 **API Endpoints Ready**
+- `POST /auth/register` - User registration
+- `POST /auth/login` - User login
+- `GET /users` - List users (Admin)
+- `GET /health` - System health check
+
+### 🔧 **Configuration**
+- Environment-based config with validation
+- JWT secrets and email SMTP settings
+- Rate limiting and CORS configuration
+- Database connection and migrations
+
+### 🧪 **Testing & Quality**
+- Unit and E2E test setup
+- API testing scripts
+- Git hooks with Husky
+- ESLint and Prettier configuration
+
+This starter gives you a production-ready foundation with modern best practices, saving weeks of initial setup time. Start building your features on top of this solid base!

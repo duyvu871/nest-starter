@@ -1,28 +1,39 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as Handlebars from 'handlebars';
+
+interface EmailConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from: string;
+  templatesPath: string;
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private readonly transporter: nodemailer.Transporter;
 
-  constructor() {
+  constructor(@Inject('email') private readonly emailConfig: EmailConfig) {
     this.transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: this.emailConfig.host,
+      port: this.emailConfig.port,
+      secure: this.emailConfig.secure,
       auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
+        user: this.emailConfig.user,
+        pass: this.emailConfig.pass,
       },
     });
   }
   private renderTemplate(templateName: string, context: any) {
     const templatePath = path.join(
       process.cwd(),
-      'src',
-      'email',
-      'templates',
+      this.emailConfig.templatesPath,
       `${templateName}.hbs`,
     );
     const templateSource = fs.readFileSync(templatePath, 'utf8');
@@ -33,7 +44,7 @@ export class EmailService {
   async sendMail(to: string, subject: string, text: string, html?: string) {
     try {
       await this.transporter.sendMail({
-        from: `"${process.env.APP_NAME}" <${process.env.SMTP_USER}>`,
+        from: this.emailConfig.from,
         to,
         subject,
         text,

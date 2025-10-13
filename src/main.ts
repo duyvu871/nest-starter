@@ -9,9 +9,9 @@ import { appConfig } from 'app/config';
 import { ResponseInterceptor } from 'common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from 'common/filters/all-exceptions.filter';
 import { HttpLogInterceptor } from 'common/interceptors/http-logger.interceptor';
-import * as path from 'path';
-import * as fs from 'fs';
 // external
+import * as fs from 'fs';
+import * as path from 'path';
 import cookieParser from 'cookie-parser';
 
 // bootstrap the application
@@ -27,7 +27,6 @@ async function bootstrap() {
       bufferLogs: true, // Buffer logs until logger is set up
     });
 
-    // app.use(cookie)
     // Get app config
     const appCfg = app.get<ConfigType<typeof appConfig>>(appConfig.KEY);
 

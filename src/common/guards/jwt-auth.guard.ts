@@ -1,5 +1,5 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
-import { TokenService } from '../token.service';
+import { TokenService } from '../../module/auth/token.service';
 import { ForbiddenError } from 'app/common/response';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from 'app/common/decorators/public.decorator';

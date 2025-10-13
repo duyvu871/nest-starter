@@ -1,20 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RegisterDto } from './dto/register.dto';
-import { UsersService } from 'app/users/users.service';
-import { PrismaService } from 'app/prisma/prisma.service';
+import { user_status, User } from '@prisma/client';
+
+import { BcryptService } from 'common/helpers/bcrypt.util';
+import { CodeService } from 'common/helpers/code.util';
 import {
   ConflictError,
   NotFoundError,
   ValidationError,
-} from 'app/common/response';
-import { EmailService } from 'app/email/email.service';
-import { VerifyEmailDto } from './dto/verify-email.dto';
+} from 'common/response/client-errors';
+import { EmailService } from 'module/email/email.service';
+import { UsersService } from 'module/user/user.service';
+import { PrismaService } from 'app/prisma/prisma.service';
 import { EmailRequestDto } from './dto/email-request.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
 import { LoginDto } from './dto/login.dto';
-import { BcryptService } from 'app/common/helpers/bcrypt.util';
-import { CodeService } from 'app/common/helpers/code.util';
-import { user_status, User } from '@prisma/client';
+import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import { TokenService } from './token.service';
 
 export interface AuthResponse {

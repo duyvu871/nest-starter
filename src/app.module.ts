@@ -3,9 +3,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 // config
-import { appConfig, databaseConfig, jobsConfig, validateEnv } from './config';
+import { appConfig, databaseConfig, emailConfig, jobsConfig, jwtConfig, validateEnv } from './config';
 
 // common
 import { LoggerCoreModule, LoggerModule } from './common/logger';
@@ -15,13 +16,13 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 
 // modules
 import { PrismaModule } from './prisma/prisma.module';
-import { JobsModule } from './jobs/jobs.module';
-import { AuthModule } from './auth/auth.module';
+import { JobsModule } from './module/jobs/jobs.module';
+import { AuthModule } from './module/auth/auth.module';
 import { APP_GUARD } from '@nestjs/core';
-import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
-import { RolesGuard } from './auth/guards/roles.guard';
-import { TokenService } from './auth/token.service';
-import { HealthModule } from './health/health.module';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
+import { TokenService } from './module/auth/token.service';
+import { HealthModule } from './module/health/health.module';
 
 @Module({
   imports: [
@@ -56,7 +57,7 @@ import { HealthModule } from './health/health.module';
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`],
       // validate with Zod
       validate: validateEnv, // use Zod to validate and type
-      load: [appConfig, databaseConfig, jobsConfig],
+      load: [appConfig, databaseConfig, emailConfig, jobsConfig, jwtConfig],
     }),
     LoggerCoreModule,
     LoggerModule.forFeature(['HTTP', 'DATABASE', 'APP', 'EMAIL']),

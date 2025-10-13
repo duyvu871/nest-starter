@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
-import { UsersModule } from 'app/users/users.module';
+import { BcryptService } from 'common/helpers/bcrypt.util';
+import { CodeService } from 'common/helpers/code.util';
+import { UsersModule } from 'module/user/user.module';
+import { EmailService } from 'module/email/email.service';
 import { PrismaService } from 'app/prisma/prisma.service';
-import { EmailService } from 'app/email/email.service';
-import { CodeService } from 'app/common/helpers/code.util';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 import { TokenService } from './token.service';
-import { BcryptService } from 'app/common/helpers/bcrypt.util';
 
 @Module({
   controllers: [AuthController],

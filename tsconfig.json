@@ -25,6 +25,7 @@
       "app/*": ["./src/*"],
       "common/*": ["./src/common/*"],
       "config/*": ["./src/config/*"],
+      "module/*": ["./src/module/*"],
       "test/*": ["./test/*"]
     }
   }

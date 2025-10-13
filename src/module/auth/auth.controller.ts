@@ -14,9 +14,9 @@ import { LoginDto } from './dto/login.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import express from 'express';
-import { Public } from 'app/common/decorators/public.decorator';
-import { User } from 'app/common/decorators/user.decorator';
-import { ApiSuccess } from 'app/common/decorators';
+import { Public } from 'common/decorators/public.decorator';
+import { User } from 'common/decorators/user.decorator';
+import { ApiSuccess } from 'common/decorators';
 import type { IUSER } from './token.service';
 
 @Controller('auth')
