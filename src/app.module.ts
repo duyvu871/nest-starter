@@ -1,12 +1,21 @@
 import { join } from 'node:path';
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 // config
-import { appConfig, databaseConfig, emailConfig, jobsConfig, jwtConfig, validateEnv } from './config';
+import {
+  appConfig,
+  databaseConfig,
+  emailConfig,
+  jobsConfig,
+  jwtConfig,
+  rateLimitConfig,
+  validateEnv,
+} from './config';
 
 // common
 import { LoggerCoreModule, LoggerModule } from './common/logger';
@@ -18,7 +27,6 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { PrismaModule } from './prisma/prisma.module';
 import { JobsModule } from './module/jobs/jobs.module';
 import { AuthModule } from './module/auth/auth.module';
-import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { TokenService } from './module/auth/token.service';
@@ -57,7 +65,27 @@ import { HealthModule } from './module/health/health.module';
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`],
       // validate with Zod
       validate: validateEnv, // use Zod to validate and type
-      load: [appConfig, databaseConfig, emailConfig, jobsConfig, jwtConfig],
+      load: [
+        appConfig,
+        databaseConfig,
+        emailConfig,
+        jobsConfig,
+        jwtConfig,
+        rateLimitConfig,
+      ],
+    }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const throttlerConfig = config.get('throttler');
+        return [
+          {
+            ttl: throttlerConfig.ttl * 1000, // Convert to milliseconds
+            limit: throttlerConfig.limit,
+          },
+        ];
+      },
     }),
     LoggerCoreModule,
     LoggerModule.forFeature(['HTTP', 'DATABASE', 'APP', 'EMAIL']),
@@ -72,6 +100,10 @@ import { HealthModule } from './module/health/health.module';
     HttpLogInterceptor,
     ResponseInterceptor,
     AllExceptionsFilter,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

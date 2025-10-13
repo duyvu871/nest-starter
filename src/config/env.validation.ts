@@ -34,6 +34,54 @@ export const envSchema = z.object({
   // Jobs
   TZ: z.string().default('Asia/Ho_Chi_Minh'),
   EXAMPLE_CRON: z.string().default('0 2 * * *'), // every day at 2:00 AM
+
+  // Health Check Configuration
+  HEALTH_ENDPOINTS_ENABLED: z.coerce.boolean().default(false),
+
+  // Security & Monitoring
+  JWT_ACCESS_SECRET: z.string(),
+  JWT_REFRESH_SECRET: z.string(),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  JWT_SECRET: z.string(),
+  JWT_EXPIRES_IN: z.string().default('24h'),
+
+  // Email Configuration
+  SMTP_HOST: z.string().default('smtp.gmail.com'),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_USER: z.string(),
+  SMTP_PASS: z.string(),
+  EMAIL_FROM: z.string(),
+  EMAIL_TEMPLATES_PATH: z.string().default('src/module/email/templates'),
+
+  // Redis Configuration
+  REDIS_URL: z.string().default('redis://localhost:6379'),
+
+  // File Upload Configuration
+  UPLOAD_DEST: z.string().default('./uploads'),
+  MAX_FILE_SIZE: z.coerce.number().int().positive().default(10485760),
+
+  // Logging Configuration
+  LOG_LEVEL: z.string().default('info'),
+  LOG_FILE_MAX_SIZE: z.string().default('10m'),
+  LOG_FILE_MAX_FILES: z.coerce.number().int().positive().default(5),
+
+  // Rate Limiting
+  RATE_LIMIT_TTL: z.coerce.number().int().positive().default(60),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
+
+  // CORS Configuration
+  CORS_ORIGINS: z
+    .string()
+    .default('http://localhost:3000,http://localhost:4200'),
+
+  // Security
+  BCRYPT_ROUNDS: z.coerce.number().int().min(1).max(20).default(12),
+
+  // Monitoring
+  PROMETHEUS_ENABLED: z.coerce.boolean().default(false),
+  METRICS_PORT: z.coerce.number().int().min(1).max(65535).default(9090),
 });
 
 // define the environment variables type

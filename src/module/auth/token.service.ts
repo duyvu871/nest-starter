@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { jwtConfig } from 'app/config';
-import jwt, { JwtPayload, Secret } from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 
 export interface IUSER {
   id: string;
@@ -11,13 +11,6 @@ export interface IUSER {
   status: string;
 }
 
-interface JwtConfig {
-  accessSecret: string;
-  refreshSecret: string;
-  accessExpiresIn: string;
-  refreshExpiresIn: string;
-}
-
 @Injectable()
 export class TokenService {
   private readonly accessSecret: string;
@@ -25,7 +18,9 @@ export class TokenService {
   private readonly accessExpiresIn: string;
   private readonly refreshExpiresIn: string;
 
-  constructor(@Inject('jwt') private readonly jwtCfg: ConfigType<typeof jwtConfig>) {
+  constructor(
+    @Inject('jwt') private readonly jwtCfg: ConfigType<typeof jwtConfig>,
+  ) {
     this.accessSecret = this.jwtCfg.accessSecret;
     this.refreshSecret = this.jwtCfg.refreshSecret;
     this.accessExpiresIn = this.jwtCfg.accessExpiresIn;
@@ -33,11 +28,10 @@ export class TokenService {
   }
 
   generateTokenPair(payload: IUSER) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const access_token = (jwt.sign as any)(payload, this.accessSecret, {
       expiresIn: this.accessExpiresIn,
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const refresh_token = (jwt.sign as any)(payload, this.refreshSecret, {
       expiresIn: this.refreshExpiresIn,
     });
