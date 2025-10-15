@@ -56,7 +56,10 @@ export const envSchema = z.object({
   EMAIL_TEMPLATES_PATH: z.string().default('src/module/email/templates'),
 
   // Redis Configuration
-  REDIS_URL: z.string().default('redis://localhost:6379'),
+  REDIS_URL: z.string().url(),
+  REDIS_HOST: z.string().default('localhost'),
+  REDIS_PORT: z.coerce.number().int().min(1).max(65535).default(6379),
+  REDIS_PASSWORD: z.string().default(''),
 
   // File Upload Configuration
   UPLOAD_DEST: z.string().default('./uploads'),
@@ -101,6 +104,16 @@ export function validateEnv(input: Record<string, unknown>): Env {
   ) {
     // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     input.DATABASE_URL = `postgresql://${input.DB_USER}:${input.DB_PASSWORD}@${input.DB_HOST}:${input.DB_PORT}/${input.DB_NAME}?schema=${input.DB_SCHEMA}`;
+  }
+
+  // Construct REDIS_URL if not provided but individual components are
+  if (
+    !input.REDIS_URL &&
+    input.REDIS_HOST &&
+    input.REDIS_PORT &&
+    input.REDIS_PASSWORD
+  ) {
+    input.REDIS_URL = `redis://${input.REDIS_PASSWORD}@${input.REDIS_HOST}:${input.REDIS_PORT}`;
   }
 
   // Parse and validate

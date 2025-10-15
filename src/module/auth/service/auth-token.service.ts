@@ -12,7 +12,7 @@ export interface IUSER {
 }
 
 @Injectable()
-export class TokenService {
+export class AuthTokenService {
   private readonly accessSecret: string;
   private readonly refreshSecret: string;
   private readonly accessExpiresIn: string;
@@ -36,6 +36,24 @@ export class TokenService {
       expiresIn: this.refreshExpiresIn,
     });
     return { access_token, refresh_token };
+  }
+
+  generateVerificationToken(payload: { id: string; email: string }): string {
+    return (jwt.sign as any)(payload, this.accessSecret, {
+      expiresIn: '24h', // Verification tokens expire in 24 hours
+    });
+  }
+
+  verifyVerificationToken(token: string): JwtPayload {
+    try {
+      const decoded = jwt.verify(token, this.accessSecret);
+      if (typeof decoded === 'string') {
+        throw new UnauthorizedException('Invalid verification token.');
+      }
+      return decoded;
+    } catch {
+      throw new UnauthorizedException('Invalid or expired verification token.');
+    }
   }
 
   verifyAccessToken(token: string): JwtPayload {

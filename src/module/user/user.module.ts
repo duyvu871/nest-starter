@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BcryptService } from 'common/helpers/bcrypt.util';
-import { PrismaService } from 'app/prisma/prisma.service';
+import { PrismaService } from 'app/infra/prisma/prisma.service';
 import { UsersService } from './user.service';
 import { UsersController } from './user.controller';
 

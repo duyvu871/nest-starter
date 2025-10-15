@@ -44,12 +44,6 @@ model User {
   updatedAt   DateTime    @updatedAt
   refresh_token String?
 
-  // code 
-  verification_code String?
-  verification_code_expired DateTime? 
-  password_reset_code String?
-  password_reset_code_expired DateTime?
-
   // indexes
   @@index([role, status])
 

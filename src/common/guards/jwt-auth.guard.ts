@@ -1,5 +1,5 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
-import { TokenService } from '../../module/auth/token.service';
+import { AuthTokenService } from '../../module/auth/service/auth-token.service';
 import { ForbiddenError } from 'app/common/response';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from 'app/common/decorators/public.decorator';
@@ -7,7 +7,7 @@ import { IS_PUBLIC_KEY } from 'app/common/decorators/public.decorator';
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
-    private readonly tokenService: TokenService,
+    private readonly tokenService: AuthTokenService,
     private readonly reflector: Reflector, // ← Inject Reflector để đọc metadata
   ) {}
 

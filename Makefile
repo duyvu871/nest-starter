@@ -37,6 +37,33 @@ format:
 lint:
 	npm run lint
 
+# Worker commands
+.PHONY: worker worker-dev worker-debug worker-prod worker-email worker-email-dev worker-email-debug worker-email-prod
+
+worker:
+	npm run start:worker
+
+worker-dev:
+	npm run start:worker:email
+
+worker-debug:
+	npm run start:worker:email:debug
+
+worker-prod:
+	npm run start:worker:email:prod
+
+worker-email:
+	npm run start:worker:email
+
+worker-email-dev:
+	npm run start:worker:email
+
+worker-email-debug:
+	npm run start:worker:email:debug
+
+worker-email-prod:
+	npm run start:worker:email:prod
+
 # Tailwind commands
 .PHONY: tw-dev tw-build tw-build-dev tw-clean tw-purge
 
@@ -169,6 +196,15 @@ help:
 	@echo "    make format      - Format code"
 	@echo "    make lint        - Lint code"
 	@echo "    make dev-full    - Run app + Tailwind in development mode"
+	@echo "  Worker:"
+	@echo "    make worker          - Run default worker in production mode"
+	@echo "    make worker-dev      - Run email worker in development mode"
+	@echo "    make worker-debug    - Run email worker in debug mode"
+	@echo "    make worker-prod     - Run email worker in production mode"
+	@echo "    make worker-email    - Run email worker in development mode"
+	@echo "    make worker-email-dev  - Run email worker in development mode"
+	@echo "    make worker-email-debug - Run email worker in debug mode"
+	@echo "    make worker-email-prod - Run email worker in production mode"
 	@echo "  Tailwind:"
 	@echo "    make tw-dev      - Run Tailwind CSS in watch mode"
 	@echo "    make tw-build    - Build Tailwind CSS for production (minified)"

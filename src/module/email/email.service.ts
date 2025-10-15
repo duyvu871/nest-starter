@@ -1,8 +1,6 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as Handlebars from 'handlebars';
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 interface EmailConfig {
   host: string;
@@ -14,57 +12,71 @@ interface EmailConfig {
   templatesPath: string;
 }
 
+export interface EmailJobData {
+  to: string;
+  subject?: string;
+  text?: string;
+  html?: string;
+  template?: string;
+  context?: Record<string, any>;
+  // Idempotency key for deduplication
+  idempotencyKey?: string;
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private readonly transporter: nodemailer.Transporter;
 
-  constructor(@Inject('email') private readonly emailConfig: EmailConfig) {
-    this.transporter = nodemailer.createTransport({
-      host: this.emailConfig.host,
-      port: this.emailConfig.port,
-      secure: this.emailConfig.secure,
-      auth: {
-        user: this.emailConfig.user,
-        pass: this.emailConfig.pass,
-      },
-    });
-  }
-  private renderTemplate(templateName: string, context: any) {
-    const templatePath = path.join(
-      process.cwd(),
-      this.emailConfig.templatesPath,
-      `${templateName}.hbs`,
-    );
-    const templateSource = fs.readFileSync(templatePath, 'utf8');
-    const compiledTemplate = Handlebars.compile(templateSource);
-    return compiledTemplate(context);
-  }
+  constructor(
+    @InjectQueue('email') private readonly emailQueue: Queue<EmailJobData>,
+  ) {}
 
-  async sendMail(to: string, subject: string, text: string, html?: string) {
+  async sendJob(data: EmailJobData): Promise<void> {
     try {
-      await this.transporter.sendMail({
-        from: this.emailConfig.from,
-        to,
-        subject,
-        text,
-        html,
-      });
-
-      this.logger.log(`Email sent to ${to} with subject "${subject}"`);
-    } catch (err) {
-      this.logger.error(` Failed to send email to ${to}: ${err.message}`);
-      throw err;
+      await this.emailQueue.add('send-email', data);
+      this.logger.log(`Email job queued for ${data.to}`);
+    } catch (error) {
+      this.logger.error(`Failed to queue email for ${data.to}: ${error.message}`);
+      throw new Error(`Email queuing failed: ${error.message}`);
     }
   }
 
-  async sendVerificationEmail(to: string, code: string, ttl: Date) {
-    const html = this.renderTemplate('verification', { code, ttl });
-    return this.sendMail(to, 'Verify your email', '', html);
+  async sendMail(to: string, subject: string, text: string, html?: string): Promise<void> {
+    const idempotencyKey = `email:${to}:${subject}`;
+    await this.sendJob({
+      to,
+      subject,
+      text,
+      html,
+      idempotencyKey,
+    });
   }
 
-  async sendForgotPasswordEmail(to: string, code: string, ttl: Date) {
-    const html = this.renderTemplate('forgot-password', { code, ttl });
-    return this.sendMail(to, 'Reset your password', '', html);
+  async sendVerificationEmail(to: string, code: string, ttl: Date): Promise<void> {
+    const idempotencyKey = `verification:${to}:${code}`;
+    await this.sendJob({
+      to,
+      template: 'verification',
+      context: {
+        code,
+        ttl: ttl.toISOString(),
+        subject: 'Verify your email',
+      },
+      idempotencyKey,
+    });
+  }
+
+  async sendForgotPasswordEmail(to: string, code: string, ttl: Date): Promise<void> {
+    const idempotencyKey = `forgot-password:${to}:${code}`;
+    await this.sendJob({
+      to,
+      template: 'forgot-password',
+      context: {
+        code,
+        ttl: ttl.toISOString(),
+        subject: 'Reset your password',
+      },
+      idempotencyKey,
+    });
   }
 }

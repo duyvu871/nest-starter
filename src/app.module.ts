@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { BullModule } from '@nestjs/bullmq';
 import { APP_GUARD } from '@nestjs/core';
 
 // config
@@ -14,6 +15,8 @@ import {
   jobsConfig,
   jwtConfig,
   rateLimitConfig,
+  bullConfig,
+  bullConfigFactory,
   validateEnv,
 } from './config';
 
@@ -24,12 +27,13 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 // modules
-import { PrismaModule } from './prisma/prisma.module';
+import { PrismaModule } from './infra/prisma/prisma.module';
+import { RedisModule } from './infra/redis/redis.module';
 import { JobsModule } from './module/jobs/jobs.module';
 import { AuthModule } from './module/auth/auth.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
-import { TokenService } from './module/auth/token.service';
+import { AuthTokenService } from './module/auth/service/auth-token.service';
 import { HealthModule } from './module/health/health.module';
 
 @Module({
@@ -72,7 +76,13 @@ import { HealthModule } from './module/health/health.module';
         jobsConfig,
         jwtConfig,
         rateLimitConfig,
+        bullConfig,
       ],
+    }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: bullConfigFactory,
     }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
@@ -90,13 +100,14 @@ import { HealthModule } from './module/health/health.module';
     LoggerCoreModule,
     LoggerModule.forFeature(['HTTP', 'DATABASE', 'APP', 'EMAIL']),
     PrismaModule,
+    RedisModule,
     AuthModule,
     ScheduleModule.forRoot(),
     JobsModule,
     HealthModule,
   ],
   providers: [
-    TokenService,
+    AuthTokenService,
     HttpLogInterceptor,
     ResponseInterceptor,
     AllExceptionsFilter,
