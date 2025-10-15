@@ -9,7 +9,9 @@ export interface SendForgotPasswordEmailParams {
 }
 
 @Injectable()
-export class SendForgotPasswordEmailUseCase implements BaseUseCase<SendForgotPasswordEmailParams, void> {
+export class SendForgotPasswordEmailUseCase
+  implements BaseUseCase<SendForgotPasswordEmailParams, void>
+{
   constructor(private readonly emailService: EmailService) {}
 
   async execute(params: SendForgotPasswordEmailParams): Promise<void> {

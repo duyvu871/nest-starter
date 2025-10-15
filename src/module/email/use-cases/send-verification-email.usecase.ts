@@ -9,7 +9,9 @@ export interface SendVerificationEmailParams {
 }
 
 @Injectable()
-export class SendVerificationEmailUseCase implements BaseUseCase<SendVerificationEmailParams, void> {
+export class SendVerificationEmailUseCase
+  implements BaseUseCase<SendVerificationEmailParams, void>
+{
   constructor(private readonly emailService: EmailService) {}
 
   async execute(params: SendVerificationEmailParams): Promise<void> {
