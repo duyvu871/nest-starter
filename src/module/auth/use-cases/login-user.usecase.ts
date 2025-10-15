@@ -3,6 +3,7 @@ import { User, user_status } from '@prisma/client';
 import { NotFoundError, ValidationError } from 'common/response/client-errors';
 import { BcryptService } from 'common/helpers/bcrypt.util';
 import { PrismaService } from 'infra/prisma/prisma.service';
+import { BaseUseCase } from 'shared/interfaces/base-usecase.interface';
 import { UsersService } from 'module/user/user.service';
 import { LoginDto } from '../dto/login.dto';
 import { AuthTokenService } from '../service/auth-token.service';
@@ -14,7 +15,7 @@ export interface AuthResponse {
 }
 
 @Injectable()
-export class LoginUserUseCase {
+export class LoginUserUseCase implements BaseUseCase<LoginDto, AuthResponse> {
   private readonly errorMessages = {
     INVALID_CREDENTIALS: 'Invalid email/username or password',
     EMAIL_NOT_VERIFIED: 'Please verify your email before logging in',

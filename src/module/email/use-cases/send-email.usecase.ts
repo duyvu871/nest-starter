@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EmailService } from '../email.service';
+import { BaseUseCase } from 'shared/interfaces/base-usecase.interface';
 
 export interface SendEmailParams {
   to: string;
@@ -9,7 +10,7 @@ export interface SendEmailParams {
 }
 
 @Injectable()
-export class SendEmailUseCase {
+export class SendEmailUseCase implements BaseUseCase<SendEmailParams, void> {
   constructor(private readonly emailService: EmailService) {}
 
   async execute(params: SendEmailParams): Promise<void> {

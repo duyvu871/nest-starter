@@ -27,6 +27,7 @@
       "config/*": ["./src/config/*"],
       "module/*": ["./src/module/*"],
       "infra/*": ["./src/infra/*"],
+      "shared/*": ["./src/shared/*"],
       "test/*": ["./test/*"]
     }
   }

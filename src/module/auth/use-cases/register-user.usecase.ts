@@ -2,14 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { ConflictError } from 'common/response/client-errors/conflict';
 import { BcryptService } from 'common/helpers/bcrypt.util';
 import { PrismaService } from 'infra/prisma/prisma.service';
+import { BaseUseCase } from 'shared/interfaces/base-usecase.interface';
 import { UsersService } from 'module/user/user.service';
+import { SendVerificationEmailUseCase } from 'module/email/use-cases/send-verification-email.usecase';
 import { VerificationService } from 'module/verification/verification.service';
 import { RegisterDto } from '../dto/register.dto';
 import { AuthTokenService } from '../service/auth-token.service';
-import { SendVerificationEmailUseCase } from 'app/module/email/use-cases/send-verification-email.usecase';
 
 @Injectable()
-export class RegisterUserUseCase {
+export class RegisterUserUseCase implements BaseUseCase<RegisterDto, void> {
   constructor(
     private readonly usersService: UsersService,
     private readonly prismaService: PrismaService,
