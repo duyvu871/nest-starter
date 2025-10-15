@@ -17,6 +17,11 @@ import { SendForgotPasswordEmailUseCase } from './use-cases/send-forgot-password
     SendVerificationEmailUseCase,
     SendForgotPasswordEmailUseCase,
   ],
-  exports: [EmailService],
+  exports: [
+    EmailService,
+    SendEmailUseCase,
+    SendVerificationEmailUseCase,
+    SendForgotPasswordEmailUseCase,
+  ],
 })
 export class EmailModule {}

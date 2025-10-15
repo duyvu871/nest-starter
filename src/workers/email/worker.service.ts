@@ -1,19 +1,12 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as Handlebars from 'handlebars';
 import { z } from 'zod';
 
-interface EmailConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  user: string;
-  pass: string;
-  from: string;
-  templatesPath: string;
-}
+import EmailConfig from 'config/email.config';
 
 const emailSchema = z.string().email();
 
@@ -21,9 +14,15 @@ const emailSchema = z.string().email();
 export class WorkerEmailService {
   private readonly logger = new Logger(WorkerEmailService.name);
   private readonly transporter: nodemailer.Transporter;
-  private readonly templateCache = new Map<string, HandlebarsTemplateDelegate>();
+  private readonly templateCache = new Map<
+    string,
+    HandlebarsTemplateDelegate
+  >();
 
-  constructor(@Inject('email') private readonly emailConfig: EmailConfig) {
+  constructor(
+    @Inject(EmailConfig.KEY)
+    private readonly emailConfig: ConfigType<typeof EmailConfig>,
+  ) {
     this.transporter = nodemailer.createTransport({
       host: this.emailConfig.host,
       port: this.emailConfig.port,
@@ -43,12 +42,16 @@ export class WorkerEmailService {
       await this.transporter.verify();
       this.logger.log('Email transporter verified successfully');
     } catch (error) {
-      this.logger.error(`Email transporter verification failed: ${error.message}`);
+      this.logger.error(
+        `Email transporter verification failed: ${error.message}`,
+      );
       throw new Error('Email transporter configuration is invalid');
     }
   }
 
-  private getCompiledTemplate(templateName: string): HandlebarsTemplateDelegate {
+  private getCompiledTemplate(
+    templateName: string,
+  ): HandlebarsTemplateDelegate {
     if (!this.templateCache.has(templateName)) {
       const templatePath = path.join(
         process.cwd(),
@@ -57,7 +60,9 @@ export class WorkerEmailService {
       );
 
       if (!fs.existsSync(templatePath)) {
-        throw new Error(`Email template '${templateName}' not found at ${templatePath}`);
+        throw new Error(
+          `Email template '${templateName}' not found at ${templatePath}`,
+        );
       }
 
       const templateSource = fs.readFileSync(templatePath, 'utf8');
@@ -66,7 +71,12 @@ export class WorkerEmailService {
     return this.templateCache.get(templateName)!;
   }
 
-  async sendEmail(to: string, subject: string, text: string, html?: string): Promise<void> {
+  async sendEmail(
+    to: string,
+    subject: string,
+    text: string,
+    html?: string,
+  ): Promise<void> {
     // Validate email
     emailSchema.parse(to);
 
@@ -79,14 +89,20 @@ export class WorkerEmailService {
         html,
       });
 
-      this.logger.log(`Email sent successfully to ${to} with messageId: ${result.messageId}`);
+      this.logger.log(
+        `Email sent successfully to ${to} with messageId: ${result.messageId}`,
+      );
     } catch (error) {
       this.logger.error(`Failed to send email to ${to}: ${error.message}`);
       throw new Error(`Email sending failed: ${error.message}`);
     }
   }
 
-  async sendTemplatedEmail(to: string, templateName: string, context: Record<string, any>): Promise<void> {
+  async sendTemplatedEmail(
+    to: string,
+    templateName: string,
+    context: Record<string, any>,
+  ): Promise<void> {
     // Validate email
     emailSchema.parse(to);
 
@@ -95,16 +111,23 @@ export class WorkerEmailService {
       const html = template(context);
 
       // Generate subject from template or use default
-      const subject = context.subject || `Message from ${this.emailConfig.from}`;
+      const subject =
+        context.subject || `Message from ${this.emailConfig.from}`;
 
       await this.sendEmail(to, subject, '', html);
     } catch (error) {
-      this.logger.error(`Failed to send templated email to ${to}: ${error.message}`);
+      this.logger.error(
+        `Failed to send templated email to ${to}: ${error.message}`,
+      );
       throw error;
     }
   }
 
-  async sendVerificationEmail(to: string, code: string, ttl: Date): Promise<void> {
+  async sendVerificationEmail(
+    to: string,
+    code: string,
+    ttl: Date,
+  ): Promise<void> {
     await this.sendTemplatedEmail(to, 'verification', {
       code,
       ttl: ttl.toISOString(),
@@ -112,7 +135,11 @@ export class WorkerEmailService {
     });
   }
 
-  async sendForgotPasswordEmail(to: string, code: string, ttl: Date): Promise<void> {
+  async sendForgotPasswordEmail(
+    to: string,
+    code: string,
+    ttl: Date,
+  ): Promise<void> {
     await this.sendTemplatedEmail(to, 'forgot-password', {
       code,
       ttl: ttl.toISOString(),

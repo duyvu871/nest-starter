@@ -10,9 +10,7 @@ export interface SendEmailParams {
 
 @Injectable()
 export class SendEmailUseCase {
-  constructor(
-    private readonly emailService: EmailService,
-  ) {}
+  constructor(private readonly emailService: EmailService) {}
 
   async execute(params: SendEmailParams): Promise<void> {
     const { to, subject, text, html } = params;

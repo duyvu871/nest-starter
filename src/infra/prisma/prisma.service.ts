@@ -17,9 +17,10 @@ export class PrismaService
     @Inject(databaseConfig.KEY)
     private readonly dbCfg: ConfigType<typeof databaseConfig>,
   ) {
+    const dbUrl = dbCfg.url;
     super({
       datasources: {
-        db: { url: dbCfg.url },
+        db: { url: dbUrl },
       },
     });
   }

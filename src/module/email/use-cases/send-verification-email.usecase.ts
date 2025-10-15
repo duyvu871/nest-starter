@@ -4,25 +4,25 @@ import { EmailService } from '../email.service';
 export interface SendVerificationEmailParams {
   to: string;
   code: string;
-  ttl: Date;
+  ttl: number; // in milliseconds to convert to minutes
 }
 
 @Injectable()
 export class SendVerificationEmailUseCase {
-  constructor(
-    private readonly emailService: EmailService,
-  ) {}
+  constructor(private readonly emailService: EmailService) {}
 
   async execute(params: SendVerificationEmailParams): Promise<void> {
     const { to, code, ttl } = params;
     const idempotencyKey = `verification:${to}:${code}`;
+    const ttlInMinutes = Math.floor(ttl / 60000);
+
     await this.emailService.sendJob({
       to,
       template: 'verification',
       context: {
         code,
-        ttl: ttl.toISOString(),
-        subject: 'Verify your email',
+        ttl: ttlInMinutes,
+        subject: 'Verify your email to complete registration',
       },
       idempotencyKey,
     });

@@ -30,7 +30,9 @@ export class LoginUserUseCase {
 
   async execute(dto: LoginDto): Promise<AuthResponse> {
     // Find user by email or username
-    const user = await this.usersService.findByEmailOrUsername(dto.usernameOrEmail);
+    const user = await this.usersService.findByEmailOrUsername(
+      dto.usernameOrEmail,
+    );
     if (!user) {
       throw new NotFoundError(this.errorMessages.INVALID_CREDENTIALS);
     }

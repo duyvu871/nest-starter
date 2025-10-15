@@ -19,7 +19,8 @@ export class AuthTokenService {
   private readonly refreshExpiresIn: string;
 
   constructor(
-    @Inject('jwt') private readonly jwtCfg: ConfigType<typeof jwtConfig>,
+    @Inject(jwtConfig.KEY)
+    private readonly jwtCfg: ConfigType<typeof jwtConfig>,
   ) {
     this.accessSecret = this.jwtCfg.accessSecret;
     this.refreshSecret = this.jwtCfg.refreshSecret;

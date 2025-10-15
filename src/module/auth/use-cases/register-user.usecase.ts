@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConflictError } from 'common/response/client-errors/conflict';
+import { BcryptService } from 'common/helpers/bcrypt.util';
 import { PrismaService } from 'infra/prisma/prisma.service';
 import { UsersService } from 'module/user/user.service';
-import { EmailService } from 'module/email/email.service';
+import { VerificationService } from 'module/verification/verification.service';
 import { RegisterDto } from '../dto/register.dto';
-import { BcryptService } from 'common/helpers/bcrypt.util';
 import { AuthTokenService } from '../service/auth-token.service';
+import { SendVerificationEmailUseCase } from 'app/module/email/use-cases/send-verification-email.usecase';
 
 @Injectable()
 export class RegisterUserUseCase {
@@ -13,7 +14,8 @@ export class RegisterUserUseCase {
     private readonly usersService: UsersService,
     private readonly prismaService: PrismaService,
     private readonly bcryptService: BcryptService,
-    private readonly emailService: EmailService,
+    private readonly verificationEmailUsecase: SendVerificationEmailUseCase,
+    private readonly verificationService: VerificationService,
     private readonly tokenService: AuthTokenService,
   ) {}
 
@@ -40,10 +42,13 @@ export class RegisterUserUseCase {
     });
 
     // Send verification email asynchronously
-    this.sendVerificationEmailAsync(dto.email, verificationToken);
+    await this.sendVerificationEmail(dto.email, verificationToken);
   }
 
-  private async validateUserDoesNotExist(email: string, username: string): Promise<void> {
+  private async validateUserDoesNotExist(
+    email: string,
+    username: string,
+  ): Promise<void> {
     const [existingEmail, existingUsername] = await Promise.all([
       this.usersService.findByEmail(email),
       this.usersService.findByUsername(username),
@@ -58,15 +63,37 @@ export class RegisterUserUseCase {
     }
   }
 
-  private sendVerificationEmailAsync(email: string, token: string): void {
-    setImmediate(async () => {
-      try {
-        // For now, just log the token. In real implementation, you'd send email
-        console.log(`Verification token for ${email}: ${token}`);
-        // await this.emailService.sendVerificationEmail(email, token);
-      } catch (error) {
-        console.error('Failed to send verification email:', error);
-      }
-    });
+  private async sendVerificationEmail(
+    email: string,
+    token: string,
+  ): Promise<void> {
+    try {
+      // Generate a verification code and its expiration time
+      const { expiresAt, code } = await this.verificationService.generate({
+        namespace: 'email_verification',
+        subject: email,
+        ttlSec: 15 * 60, // 15 minutes
+        length: 6,
+        maxAttempts: 5,
+        rateLimitMax: 3,
+        rateLimitWindowSec: 60 * 15, // 15 minutes
+      });
+      const ttl = expiresAt - Date.now(); // in milliseconds
+
+      console.log('Verification code', {
+        to: email,
+        code,
+        ttl,
+      });
+
+      console.log(`Verification token for ${email}: ${token}`);
+      await this.verificationEmailUsecase.execute({
+        to: email,
+        code,
+        ttl,
+      });
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+    }
   }
 }

@@ -126,5 +126,6 @@ export function validateEnv(input: Record<string, unknown>): Env {
     console.error('❌ Invalid environment variables:', issues);
     process.exit(1);
   }
+
   return parsed.data;
 }

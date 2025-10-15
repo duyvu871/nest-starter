@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { WorkerModule } from './worker.module';
-import { Worker } from 'bullmq';
 
 async function bootstrap() {
   // Worker không cần HTTP server, chỉ khởi tạo module để chạy processors
@@ -14,7 +13,9 @@ async function bootstrap() {
     if (isShuttingDown) return;
     isShuttingDown = true;
 
-    console.log(`⚙️ Email worker received ${signal}, waiting for current jobs to complete...`);
+    console.log(
+      `⚙️ Email worker received ${signal}, waiting for current jobs to complete...`,
+    );
 
     try {
       // Close the NestJS app context
@@ -27,18 +28,26 @@ async function bootstrap() {
     }
   };
 
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => {
+    (async () => await gracefulShutdown('SIGTERM'))();
+  });
+  process.on('SIGINT', () => {
+    (async () => await gracefulShutdown('SIGINT'))();
+  });
 
   // Handle uncaught exceptions
   process.on('uncaughtException', (error) => {
     console.error('⚙️ Uncaught Exception:', error);
-    gracefulShutdown('uncaughtException');
+    (async () => {
+      await gracefulShutdown('uncaughtException');
+    })();
   });
 
   process.on('unhandledRejection', (reason, promise) => {
     console.error('⚙️ Unhandled Rejection at:', promise, 'reason:', reason);
-    gracefulShutdown('unhandledRejection');
+    (async () => {
+      await gracefulShutdown('unhandledRejection');
+    })();
   });
 }
 

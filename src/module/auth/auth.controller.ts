@@ -1,14 +1,6 @@
-import { EmailRequestDto } from './dto/email-request.dto';
-import {
-  Controller,
-  Post,
-  Body,
-  Res,
-} from '@nestjs/common';
+import { Controller, Post, Body, Res } from '@nestjs/common';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { VerifyEmailDto } from './dto/verify-email.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
 import express from 'express';
 import { Public } from 'common/decorators/public.decorator';
 import { ApiSuccess } from 'common/decorators';

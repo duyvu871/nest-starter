@@ -1,0 +1,77 @@
+@startuml
+!theme plain
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 20
+skinparam maxmessagesize 120
+skinparam sequenceParticipant padding 20
+
+actor "Client App" as Client
+participant "<<Service>>\nVerificationService" as Service
+participant "Redis" as Redis
+participant "<<Library>>\nargon2" as Argon2
+
+group generate(opts)
+    Client -> Service: generate(opts)
+    activate Service
+
+    Service -> Redis: INCR keyRate
+    activate Redis
+    Redis --> Service: currentRate
+    deactivate Redis
+
+    alt currentRate > maxRate
+        Service --> Client: <<throw>> Error("Too many requests")
+    else
+        Service -> Service: randomNumeric(length)
+        Service -> Argon2: hash(code)
+        activate Argon2
+        Argon2 --> Service: hashedPassword
+        deactivate Argon2
+
+        Service -> Redis: MULTI\n.set(keyCode, hash)\n.set(keyAttempts, max)\n.EXEC()
+        activate Redis
+        Redis --> Service: OK
+        deactivate Redis
+
+        Service --> Client: { code, expiresAt }
+    end
+    deactivate Service
+end
+
+... 1 minute later ...
+
+group verifyAndConsume(opts, code)
+    Client -> Service: verifyAndConsume(opts, code)
+    activate Service
+
+    Service -> Redis: MGET keyCode, keyAttempts
+    activate Redis
+    Redis --> Service: [hash, attempts]
+    deactivate Redis
+
+    alt hash not found or attempts <= 0
+        Service --> Client: false
+    else
+        Service -> Argon2: verify(hash, code)
+        activate Argon2
+        Argon2 --> Service: isMatch (true)
+        deactivate Argon2
+
+        alt isMatch = true
+            Service -> Redis: DEL keyCode, keyAttempts
+            activate Redis
+            Redis --> Service: OK
+            deactivate Redis
+            Service --> Client: true
+        else isMatch = false
+            Service -> Redis: DECR keyAttempts
+            activate Redis
+            Redis --> Service: newAttempts
+            deactivate Redis
+            Service --> Client: false
+        end
+    end
+    deactivate Service
+end
+
+@enduml

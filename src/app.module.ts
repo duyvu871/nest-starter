@@ -33,8 +33,9 @@ import { JobsModule } from './module/jobs/jobs.module';
 import { AuthModule } from './module/auth/auth.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
-import { AuthTokenService } from './module/auth/service/auth-token.service';
 import { HealthModule } from './module/health/health.module';
+import { EmailModule } from './module/email/email.module';
+import { AuthTokenService } from './module/auth/service/auth-token.service';
 
 @Module({
   imports: [
@@ -101,6 +102,7 @@ import { HealthModule } from './module/health/health.module';
     LoggerModule.forFeature(['HTTP', 'DATABASE', 'APP', 'EMAIL']),
     PrismaModule,
     RedisModule,
+    EmailModule,
     AuthModule,
     ScheduleModule.forRoot(),
     JobsModule,
