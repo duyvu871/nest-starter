@@ -49,7 +49,10 @@ export class AuthTokenService {
    * @param userPayload User information to include in token
    * @returns Object containing access_token and refresh_token
    */
-  generateTokenPair(userPayload: IUserTokenPayload): { access_token: string; refresh_token: string } {
+  generateTokenPair(userPayload: IUserTokenPayload): {
+    access_token: string;
+    refresh_token: string;
+  } {
     const fullPayload: JWTTokenPayload<IUserTokenPayload> = {
       payload: userPayload,
       iss: this.issuer,
@@ -61,12 +64,12 @@ export class AuthTokenService {
 
     const access_token = jwt.sign(fullPayload, this.accessSecret, {
       expiresIn: this.accessExpiresIn,
-      algorithms: "HS256"
+      algorithms: 'HS256',
     } as SignOptions);
 
     const refresh_token = jwt.sign(fullPayload, this.refreshSecret, {
       expiresIn: this.refreshExpiresIn,
-      algorithms: "HS256"
+      algorithms: 'HS256',
     } as SignOptions);
 
     return { access_token, refresh_token };
@@ -80,7 +83,9 @@ export class AuthTokenService {
    */
   verifyAccessToken(token: string): JWTTokenPayload<IUserTokenPayload> {
     try {
-      const decoded = jwt.verify(token, this.accessSecret, { algorithms: ["HS256"] }) as JWTTokenPayload<IUserTokenPayload>;
+      const decoded = jwt.verify(token, this.accessSecret, {
+        algorithms: ['HS256'],
+      }) as JWTTokenPayload<IUserTokenPayload>;
       if (typeof decoded === 'string') {
         throw new UnauthorizedError('Invalid or expired access token.');
       }
@@ -98,7 +103,9 @@ export class AuthTokenService {
    */
   verifyRefreshToken(token: string): JWTTokenPayload<IUserTokenPayload> {
     try {
-      const decoded = jwt.verify(token, this.refreshSecret, { algorithms: ["HS256"] }) as JWTTokenPayload<IUserTokenPayload>;
+      const decoded = jwt.verify(token, this.refreshSecret, {
+        algorithms: ['HS256'],
+      }) as JWTTokenPayload<IUserTokenPayload>;
       if (typeof decoded === 'string') {
         throw new UnauthorizedError('Invalid or expired refresh token.');
       }

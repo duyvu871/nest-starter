@@ -2,7 +2,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigType } from '@nestjs/config';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
- import { NestExpressApplication } from '@nestjs/platform-express';
+import { NestExpressApplication } from '@nestjs/platform-express';
 // app
 import { AppModule } from 'app/app.module';
 import { appConfig } from 'app/config';
@@ -17,7 +17,7 @@ import cookieParser from 'cookie-parser';
 import * as exphbs from 'express-handlebars';
 
 // import helpers
-import hbs from "common/helpers/hbs.helper";
+import hbs from 'common/helpers/hbs.helper';
 
 // bootstrap the application
 async function bootstrap() {
@@ -56,15 +56,18 @@ async function bootstrap() {
 
     // Set Handlebars as the view engine with layouts support
     app.setBaseViewsDir(path.join(process.cwd(), 'views')); // Directory for your .hbs templates
-    app.engine('hbs', exphbs.engine({
-      extname: 'hbs',
-      defaultLayout: 'main',
-      layoutsDir: path.join(process.cwd(), 'views', 'layouts'),
-      partialsDir: path.join(process.cwd(), 'views', 'partials'),
-      helpers: {
-        ...hbs, // Spread the imported helpers here
-      },
-    }));
+    app.engine(
+      'hbs',
+      exphbs.engine({
+        extname: 'hbs',
+        defaultLayout: 'main',
+        layoutsDir: path.join(process.cwd(), 'views', 'layouts'),
+        partialsDir: path.join(process.cwd(), 'views', 'partials'),
+        helpers: {
+          ...hbs, // Spread the imported helpers here
+        },
+      }),
+    );
     app.setViewEngine('hbs');
 
     // Apply global pipes, interceptors, and filters in the correct order

@@ -13,7 +13,9 @@ export interface VerifyAccountParams {
 }
 
 @Injectable()
-export class VerifyAccountUseCase implements BaseUseCase<VerifyAccountParams, void> {
+export class VerifyAccountUseCase
+  implements BaseUseCase<VerifyAccountParams, void>
+{
   constructor(
     private readonly verificationService: VerificationService,
     private readonly verificationSessionService: VerificationSessionService,

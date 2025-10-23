@@ -24,9 +24,7 @@ export class AuthController {
   )
   async register(@Body() dto: RegisterDto) {
     const result = await this.registerUserUseCase.execute(dto);
-    return {
-      message: 'Registration successful. Please check your email for verification code.',
-    };
+    return result.user;
   }
 
   @Public()

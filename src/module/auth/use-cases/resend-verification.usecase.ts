@@ -14,7 +14,9 @@ export interface ResendVerificationDto {
 }
 
 @Injectable()
-export class ResendVerificationUseCase implements BaseUseCase<ResendVerificationDto, void> {
+export class ResendVerificationUseCase
+  implements BaseUseCase<ResendVerificationDto, void>
+{
   constructor(
     private readonly usersService: UsersService,
     private readonly verificationService: VerificationService,
@@ -74,7 +76,9 @@ export class ResendVerificationUseCase implements BaseUseCase<ResendVerification
     } catch (error) {
       // Handle rate limit errors
       if (error.message?.toLowerCase().includes('rate limit')) {
-        throw new TooManyRequestsError('Too many verification requests. Please try again later.');
+        throw new TooManyRequestsError(
+          'Too many verification requests. Please try again later.',
+        );
       }
       throw error;
     }

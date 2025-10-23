@@ -28,6 +28,13 @@ import { VerificationSessionService } from './service/verification-session.servi
     BcryptService,
   ],
   imports: [UsersModule, EmailModule, VerificationModule, RedisModule],
-  exports: [RegisterUserUseCase, LoginUserUseCase, VerifyAccountUseCase, ResendVerificationUseCase, AuthTokenService, VerificationSessionService],
+  exports: [
+    RegisterUserUseCase,
+    LoginUserUseCase,
+    VerifyAccountUseCase,
+    ResendVerificationUseCase,
+    AuthTokenService,
+    VerificationSessionService,
+  ],
 })
 export class AuthModule {}

@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Render, Query, Body, Res, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Render,
+  Query,
+  Body,
+  Res,
+  Req,
+} from '@nestjs/common';
 import { Public } from 'app/common/decorators/public.decorator';
 import { RegisterUserUseCase } from '../auth/use-cases/register-user.usecase';
 import { LoginUserUseCase } from '../auth/use-cases/login-user.usecase';
@@ -42,19 +51,18 @@ export class PageController {
     };
   }
 
-    @Post('login')
+  @Post('login')
   @Public()
-  async postLogin(
-    @Body() dto: LoginDto,
-    @Res() res: express.Response,
-  ) {
+  async postLogin(@Body() dto: LoginDto, @Res() res: express.Response) {
     try {
       const result = await this.loginUserUseCase.execute(dto);
 
       if (result.requiresVerification) {
         // Create verification session for unverified user
-        const sessionId = await this.verificationSessionService.createSession(result.user.email);
-        
+        const sessionId = await this.verificationSessionService.createSession(
+          result.user.email,
+        );
+
         // Set session cookie
         res.cookie('_sid', sessionId, {
           httpOnly: true,
@@ -62,8 +70,11 @@ export class PageController {
           maxAge: 15 * 60 * 1000, // 15 minutes
           sameSite: 'strict',
         });
-        
-        return res.redirect('/verify?message=' + encodeURIComponent('Please verify your email before logging in.'));
+
+        return res.redirect(
+          '/verify?message=' +
+            encodeURIComponent('Please verify your email before logging in.'),
+        );
       }
 
       // Set tokens in cookies for successful login
@@ -99,10 +110,7 @@ export class PageController {
 
   @Post('register')
   @Public()
-  async postRegister(
-    @Body() dto: RegisterDto,
-    @Res() res: express.Response,
-  ) {
+  async postRegister(@Body() dto: RegisterDto, @Res() res: express.Response) {
     try {
       const result = await this.registerUserUseCase.execute(dto);
 
@@ -120,20 +128,19 @@ export class PageController {
     } catch (error) {
       // Redirect back to register with error
       const errorMessage = error.message || 'Registration failed';
-      return res.redirect(`/register?error=${encodeURIComponent(errorMessage)}`);
+      return res.redirect(
+        `/register?error=${encodeURIComponent(errorMessage)}`,
+      );
     }
   }
 
   @Get('verify')
   @Public()
   @Render('pages/verify')
-  getVerify(
-    @Query('error') error?: string,
-    @Req() req?: express.Request,
-  ) {
+  getVerify(@Query('error') error?: string, @Req() req?: express.Request) {
     // Check if session cookie exists
     const hasSession = !!req?.cookies?._sid;
-    
+
     return {
       title: 'Verify Account - MyApp',
       hasSession, // Used in template to show/hide email input
@@ -151,9 +158,12 @@ export class PageController {
     try {
       // Get session ID from cookie
       const sessionId = req.cookies?._sid;
-      
+
       if (!sessionId) {
-        return res.redirect('/verify?error=' + encodeURIComponent('Session expired. Please register again.'));
+        return res.redirect(
+          '/verify?error=' +
+            encodeURIComponent('Session expired. Please register again.'),
+        );
       }
 
       await this.verifyAccountUseCase.execute({ sessionId, code: body.code });
@@ -162,7 +172,12 @@ export class PageController {
       res.clearCookie('_sid');
 
       // Redirect to login with success message
-      return res.redirect('/login?message=' + encodeURIComponent('Account verified successfully. You can now login.'));
+      return res.redirect(
+        '/login?message=' +
+          encodeURIComponent(
+            'Account verified successfully. You can now login.',
+          ),
+      );
     } catch (error) {
       // Redirect back to verify with error
       const errorMessage = error.message || 'Verification failed';
@@ -180,7 +195,7 @@ export class PageController {
   ) {
     // Check if session cookie exists
     const hasSession = !!req?.cookies?._sid;
-    
+
     return {
       title: 'Resend Verification - MyApp',
       hasSession,
@@ -198,20 +213,31 @@ export class PageController {
     try {
       // Get session ID from cookie
       const sessionId = req.cookies?._sid;
-      
+
       if (!sessionId) {
-        return res.redirect('/resend-verification?error=' + encodeURIComponent('Session expired. Please register or login again.'));
+        return res.redirect(
+          '/resend-verification?error=' +
+            encodeURIComponent(
+              'Session expired. Please register or login again.',
+            ),
+        );
       }
 
       await this.resendVerificationUseCase.execute({ sessionId });
 
       // Redirect back with success message
-      return res.redirect('/resend-verification?success=' + encodeURIComponent('Verification email sent successfully. Please check your email.'));
+      return res.redirect(
+        '/resend-verification?success=' +
+          encodeURIComponent(
+            'Verification email sent successfully. Please check your email.',
+          ),
+      );
     } catch (error) {
       // Redirect back with error
       const errorMessage = error.message || 'Failed to send verification email';
-      return res.redirect('/resend-verification?error=' + encodeURIComponent(errorMessage));
+      return res.redirect(
+        '/resend-verification?error=' + encodeURIComponent(errorMessage),
+      );
     }
   }
 }
-

@@ -10,10 +10,15 @@ import { VerificationSessionService } from '../service/verification-session.serv
 import { RegisterDto } from '../dto/register.dto';
 import { User } from '@prisma/client';
 
-
+export interface RegisterUserResponse {
+  user: Pick<User, 'id' | 'email' | 'username' | 'is_verified'>;
+  sessionId: string;
+}
 
 @Injectable()
-export class RegisterUserUseCase implements BaseUseCase<RegisterDto, { user: User; sessionId: string }> {
+export class RegisterUserUseCase
+  implements BaseUseCase<RegisterDto, RegisterUserResponse>
+{
   constructor(
     private readonly usersService: UsersService,
     private readonly prismaService: PrismaService,
@@ -23,7 +28,7 @@ export class RegisterUserUseCase implements BaseUseCase<RegisterDto, { user: Use
     private readonly verificationSessionService: VerificationSessionService,
   ) {}
 
-  async execute(dto: RegisterDto): Promise<{ user: User; sessionId: string }> {
+  async execute(dto: RegisterDto): Promise<RegisterUserResponse> {
     // Validate user doesn't exist
     await this.validateUserDoesNotExist(dto.email, dto.username);
 
@@ -37,10 +42,18 @@ export class RegisterUserUseCase implements BaseUseCase<RegisterDto, { user: Use
         username: dto.username,
         password: hashedPassword,
       },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        is_verified: true,
+      },
     });
 
     // Create verification session (random ID, not email-based)
-    const sessionId = await this.verificationSessionService.createSession(dto.email);
+    const sessionId = await this.verificationSessionService.createSession(
+      dto.email,
+    );
 
     // Send verification email asynchronously
     await this.sendVerificationEmail(dto.email);
@@ -66,9 +79,7 @@ export class RegisterUserUseCase implements BaseUseCase<RegisterDto, { user: Use
     }
   }
 
-  private async sendVerificationEmail(
-    email: string,
-  ): Promise<void> {
+  private async sendVerificationEmail(email: string): Promise<void> {
     try {
       // Generate a verification code and its expiration time
       const { expiresAt, code } = await this.verificationService.generate({
