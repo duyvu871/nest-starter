@@ -12,6 +12,7 @@ export interface AuthResponse {
   access_token: string;
   refresh_token: string;
   user: User;
+  requiresVerification?: boolean;
 }
 
 @Injectable()
@@ -48,6 +49,16 @@ export class LoginUserUseCase implements BaseUseCase<LoginDto, AuthResponse> {
       throw new ValidationError(this.errorMessages.INVALID_CREDENTIALS);
     }
 
+    // Check if user requires verification
+    if (!user.is_verified) {
+      return {
+        access_token: '',
+        refresh_token: '',
+        user,
+        requiresVerification: true,
+      };
+    }
+
     // Validate user can login
     this.validateUserCanLogin(user);
 
@@ -70,10 +81,6 @@ export class LoginUserUseCase implements BaseUseCase<LoginDto, AuthResponse> {
   }
 
   private validateUserCanLogin(user: User): void {
-    if (!user.is_verified) {
-      throw new ValidationError(this.errorMessages.EMAIL_NOT_VERIFIED);
-    }
-
     if (user.status !== user_status.ACTIVE) {
       throw new ValidationError(this.errorMessages.ACCOUNT_INACTIVE);
     }

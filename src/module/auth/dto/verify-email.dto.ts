@@ -1,8 +1,8 @@
 import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';
 
 export class VerifyEmailDto {
-  @IsEmail()
-  email: string;
+  @IsNotEmpty()
+  sessionId: string;
 
   @IsNotEmpty()
   @MinLength(6)

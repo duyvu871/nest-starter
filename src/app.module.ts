@@ -35,6 +35,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { HealthModule } from './module/health/health.module';
 import { EmailModule } from './module/email/email.module';
+import { PageModule } from './module/page/page.module';
 import { AuthTokenService } from './module/auth/service/auth-token.service';
 
 @Module({
@@ -103,6 +104,7 @@ import { AuthTokenService } from './module/auth/service/auth-token.service';
     PrismaModule,
     RedisModule,
     EmailModule,
+    PageModule,
     AuthModule,
     ScheduleModule.forRoot(),
     JobsModule,

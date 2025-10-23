@@ -2,6 +2,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigType } from '@nestjs/config';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
+ import { NestExpressApplication } from '@nestjs/platform-express';
 // app
 import { AppModule } from 'app/app.module';
 import { appConfig } from 'app/config';
@@ -13,6 +14,10 @@ import { HttpLogInterceptor } from 'common/interceptors/http-logger.interceptor'
 import * as fs from 'fs';
 import * as path from 'path';
 import cookieParser from 'cookie-parser';
+import * as exphbs from 'express-handlebars';
+
+// import helpers
+import hbs from "common/helpers/hbs.helper";
 
 // bootstrap the application
 async function bootstrap() {
@@ -23,13 +28,13 @@ async function bootstrap() {
   }
 
   try {
-    const app = await NestFactory.create(AppModule, {
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       bufferLogs: true, // Buffer logs until logger is set up
     });
 
     // Get app config
     const appCfg = app.get<ConfigType<typeof appConfig>>(appConfig.KEY);
-
+    // Set cookie parser
     app.use(cookieParser());
     // Set global prefix for the api
     app.setGlobalPrefix('api/v1', {
@@ -38,8 +43,29 @@ async function bootstrap() {
         { path: 'docs/*path', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },
         { path: 'health/*path', method: RequestMethod.ALL },
+        // Exclude page paths
+        { path: '', method: RequestMethod.GET },
+        { path: 'login', method: RequestMethod.ALL }, // Include POST for form submission
+        { path: 'register', method: RequestMethod.ALL }, // Include POST for form submission
+        { path: 'verify', method: RequestMethod.ALL }, // Include POST for verification
+        { path: 'resend-verification', method: RequestMethod.ALL }, // Include POST for resend verification
+        { path: 'runner/*path', method: RequestMethod.GET },
+        { path: 'report/*path', method: RequestMethod.GET },
       ],
     });
+
+    // Set Handlebars as the view engine with layouts support
+    app.setBaseViewsDir(path.join(process.cwd(), 'views')); // Directory for your .hbs templates
+    app.engine('hbs', exphbs.engine({
+      extname: 'hbs',
+      defaultLayout: 'main',
+      layoutsDir: path.join(process.cwd(), 'views', 'layouts'),
+      partialsDir: path.join(process.cwd(), 'views', 'partials'),
+      helpers: {
+        ...hbs, // Spread the imported helpers here
+      },
+    }));
+    app.setViewEngine('hbs');
 
     // Apply global pipes, interceptors, and filters in the correct order
 

@@ -6,12 +6,15 @@ import { Public } from 'common/decorators/public.decorator';
 import { ApiSuccess } from 'common/decorators';
 import { RegisterUserUseCase } from './use-cases/register-user.usecase';
 import { LoginUserUseCase } from './use-cases/login-user.usecase';
+import { VerifyAccountUseCase } from './use-cases/verify-account.usecase';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly registerUserUseCase: RegisterUserUseCase,
     private readonly loginUserUseCase: LoginUserUseCase,
+    private readonly verifyAccountUseCase: VerifyAccountUseCase,
   ) {}
 
   @Public()
@@ -20,7 +23,10 @@ export class AuthController {
     'Account registered successfully. Please check your email for verification.',
   )
   async register(@Body() dto: RegisterDto) {
-    await this.registerUserUseCase.execute(dto);
+    const result = await this.registerUserUseCase.execute(dto);
+    return {
+      message: 'Registration successful. Please check your email for verification code.',
+    };
   }
 
   @Public()
@@ -46,5 +52,12 @@ export class AuthController {
         role: result.user.role,
       },
     };
+  }
+
+  @Public()
+  @Post('verify')
+  @ApiSuccess('Account verified successfully')
+  async verify(@Body() body: VerifyEmailDto) {
+    await this.verifyAccountUseCase.execute(body);
   }
 }

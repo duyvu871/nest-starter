@@ -6,21 +6,24 @@ import { BaseUseCase } from 'shared/interfaces/base-usecase.interface';
 import { UsersService } from 'module/user/user.service';
 import { SendVerificationEmailUseCase } from 'module/email/use-cases/send-verification-email.usecase';
 import { VerificationService } from 'module/verification/verification.service';
+import { VerificationSessionService } from '../service/verification-session.service';
 import { RegisterDto } from '../dto/register.dto';
-import { AuthTokenService } from '../service/auth-token.service';
+import { User } from '@prisma/client';
+
+
 
 @Injectable()
-export class RegisterUserUseCase implements BaseUseCase<RegisterDto, void> {
+export class RegisterUserUseCase implements BaseUseCase<RegisterDto, { user: User; sessionId: string }> {
   constructor(
     private readonly usersService: UsersService,
     private readonly prismaService: PrismaService,
     private readonly bcryptService: BcryptService,
     private readonly verificationEmailUsecase: SendVerificationEmailUseCase,
     private readonly verificationService: VerificationService,
-    private readonly tokenService: AuthTokenService,
+    private readonly verificationSessionService: VerificationSessionService,
   ) {}
 
-  async execute(dto: RegisterDto): Promise<void> {
+  async execute(dto: RegisterDto): Promise<{ user: User; sessionId: string }> {
     // Validate user doesn't exist
     await this.validateUserDoesNotExist(dto.email, dto.username);
 
@@ -36,14 +39,13 @@ export class RegisterUserUseCase implements BaseUseCase<RegisterDto, void> {
       },
     });
 
-    // Generate verification token
-    const verificationToken = this.tokenService.generateVerificationToken({
-      id: user.id,
-      email: user.email,
-    });
+    // Create verification session (random ID, not email-based)
+    const sessionId = await this.verificationSessionService.createSession(dto.email);
 
     // Send verification email asynchronously
-    await this.sendVerificationEmail(dto.email, verificationToken);
+    await this.sendVerificationEmail(dto.email);
+
+    return { user, sessionId };
   }
 
   private async validateUserDoesNotExist(
@@ -66,7 +68,6 @@ export class RegisterUserUseCase implements BaseUseCase<RegisterDto, void> {
 
   private async sendVerificationEmail(
     email: string,
-    token: string,
   ): Promise<void> {
     try {
       // Generate a verification code and its expiration time
@@ -87,7 +88,6 @@ export class RegisterUserUseCase implements BaseUseCase<RegisterDto, void> {
         ttl,
       });
 
-      console.log(`Verification token for ${email}: ${token}`);
       await this.verificationEmailUsecase.execute({
         to: email,
         code,
